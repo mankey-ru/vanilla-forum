@@ -14,17 +14,22 @@
     "vue-cordova": "^0.1.2"
   },
   "devDependencies": {
+    "cordova": "^6.5.0",
+    "cross-env": "^3.1.4",
     "lodash": "*",
     "ckeditor": "^4.0.0",
     "babel-core": "^6.0.0",
     "babel-loader": "^6.0.0",
     "babel-preset-es2015": "^6.0.0",
-    "cross-env": "^3.0.0",
     "css-loader": "^0.25.0",
     "file-loader": "^0.9.0",
     "vue-loader": "^10.0.0",
     "vue-template-compiler": "^2.1.0",
     "webpack": "^2.2.0",
     "webpack-dev-server": "^2.2.0"
+  },
+  "engines": {
+    "node": ">= 4.0.0",
+    "npm": ">= 3.0.0"
   }
 }
