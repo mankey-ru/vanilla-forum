@@ -1,0 +1,64 @@
+blockquote {
+	border-left: 3px solid #bbb;
+	margin-left: .5em;
+	padding: .5em;
+}
+.main-container {
+  font-family: Tahoma;
+  padding-bottom: 8em;
+  padding-top: 2em;
+}
+
+.link-dotted{
+  cursor: pointer;
+  border-bottom: 1px dotted;
+}
+.link-dotted:hover {
+  text-decoration: none;
+}
+
+
+
+@keyframes spinner_spin {
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spinner_spin 2s linear infinite;
+  font-style: normal;
+  display: inline-block;
+}
+.spin:after {
+  font-family: 'Glyphicons Halflings';
+  content: "\e031";
+  vertical-align: middle;
+}
+.spin-lg {
+  padding: 3em 0;
+}
+.spin-lg:after {
+  font-size: 5em;
+}
+.spin-md {
+  padding: 2em 0;
+}
+.spin-md:after {
+  font-size: 3em;
+}
+.spin-sm:after {
+  font-size: 2em;
+}
+.spin-input {
+  float: right;
+  margin-left: -2em;
+  margin-top: 0.2em;
+  margin-right: .5em;
+  font-size: 1.5em;
+  padding: 0;
+  display: none;
+}
+.spin-input-parent .spin-input {
+  display: inline-block;
+}
