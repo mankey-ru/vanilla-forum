@@ -11,7 +11,7 @@
 			</div>
 			<div class="col-xs-12 text-right">
 				<button v-on:click="goto_profile" class="btn btn-default">
-					<i class="glyphicon glyphicon-user"></i> {{currentUser.first_name}} {{currentUser.last_name}}
+					<i class="glyphicon glyphicon-user"></i> {{currentUser.name}}
 				</button>
 			</div>
 		</div>

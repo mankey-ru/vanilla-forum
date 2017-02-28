@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 export default {
 	methods: {
 		gotoProfile: function (author) {
@@ -18,11 +20,16 @@ export default {
 		},
 		gotoTheme: function (th) {
 			this.$router.push({
-				name: 'msg_list',
+				name: 'reply_list',
 				params: {
-					theme_id: th.id
+					theme_id: th._id
 				}
 			})
+		}
+	},
+	filters: {
+		dateTimeFormat: function (val) {
+			return moment('1970-01-01T00:00:00.000Z').format('MM.DD.YYYY h:mm:ss');;
 		}
 	}
 }

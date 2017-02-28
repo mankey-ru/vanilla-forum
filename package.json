@@ -5,13 +5,19 @@
   "author": "mankey",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_ENV=development webpack-dev-server --open --hot",
+    "dev": "cross-env NODE_ENV=development webpack-dev-server --open --hot --port 8090",
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules",
     "watch": "webpack --watch"
   },
   "dependencies": {
+    "body-parser": "^1.16.1",
+    "moment": "^2.17.1",
+    "mongodb": "^2.2.24",
+    "notie": "*",
+    "superagent": "^3.5.0",
     "vue": "^2.1.0",
-    "vue-cordova": "^0.1.2"
+    "vue-cordova": "^0.1.2",
+    "vue-router": "*"
   },
   "devDependencies": {
     "cordova": "^6.5.0",

@@ -1,5 +1,6 @@
-var path = require('path')
-var webpack = require('webpack')
+var path = require('path');
+var webpack = require('webpack');
+var middlewareSetup = require('./src/_api.js');
 
 module.exports = {
 	entry: './src/_main.js',
@@ -36,7 +37,8 @@ module.exports = {
 	devServer: {
 		historyApiFallback: true,
 		noInfo: false,
-		contentBase: "www"
+		contentBase: "www",
+		setup: middlewareSetup
 	},
 	performance: {
 		hints: false

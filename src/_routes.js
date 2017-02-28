@@ -3,7 +3,7 @@ import user_profile from './user-profile.vue';
 import forum_group_list from './theme_list.vue'; // под замену
 import forum_list from './theme_list.vue'; // под замену
 import theme_list from './theme_list.vue'; // под замену
-import msg_list from './msg_list.vue';
+import reply_list from './reply_list.vue';
 
 
 
@@ -39,9 +39,9 @@ export default [
 	},
 	// 4. Список сообщений конкретной темы
 	{
-		path: '/msg_list/:theme_id',
-		name: 'msg_list',
-		component: msg_list
+		path: '/reply_list/:theme_id',
+		name: 'reply_list',
+		component: reply_list
 	},
 	// 404
 	{
