@@ -4,3 +4,4 @@ dist/
 npm-debug.log
 platforms
 plugins
+platforms/
