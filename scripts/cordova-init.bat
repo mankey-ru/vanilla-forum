@@ -1,2 +1,2 @@
-mkdir www
+cd ../
 cordova platform add android

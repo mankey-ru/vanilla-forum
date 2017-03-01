@@ -15,6 +15,9 @@ module.exports =  {
 				console.log(err);
 				process.exit(1);
 			}
+			else {
+				console.log(' Database connection established')
+			}
 			_db = database;
 			if (typeof callback === 'function') {
 				return callback(err);

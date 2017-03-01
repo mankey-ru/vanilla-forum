@@ -109,7 +109,7 @@
 </template>
 
 <script>
-	import mixins from './_mixins.js';
+	import mixins from './../vue-mixins.js';
 	import notie from 'notie';
 	import _ from 'lodash';
 	import $ from 'jquery';
@@ -236,8 +236,8 @@
 		mixins: [mixins],
 		mounted: function(){
 			// API http://www.sceditor.com/api/sceditor/
-			require('./../node_modules/sceditor/minified/jquery.sceditor.bbcode.min.js');
-			require('./../node_modules/sceditor/languages/ru.js');
+			require('./../../node_modules/sceditor/minified/jquery.sceditor.bbcode.min.js');
+			require('./../../node_modules/sceditor/languages/ru.js');
 			$ed = $('#editor-textarea').sceditor({
 				plugins: 'bbcode',
 				style: 'sceditor/inner-styles.css',

@@ -1,6 +1,7 @@
 const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
+const dbtools = require('./dbtools.js');
 
 const C_FORUM_GROUPS = "forum_groups";
 const C_FORUMS = "forums";
@@ -8,7 +9,6 @@ const C_THEMES = "themes";
 const C_REPLIES = "replies";
 const C_USERS = "users";
 
-const dbtools = require('./_dbtools.js');
 
 module.exports = function (app) {
 	dbtools.connect(function(err){

@@ -1,3 +1,23 @@
+<script>
+	import routes from './../vue-routes.js';
+
+	export default {
+		name: 'AppRoot',
+		data: function () {
+			return {
+				routes: routes,
+				currentUser: this.$root.currentUser
+			}
+		},
+		methods: {
+			goto_profile: function(){
+				this.$router.push('/user-profile')
+			}
+		}
+	}
+</script>
+
+
 <template>
 	<div>
 		<!-- <div class="f-navbar">
@@ -19,25 +39,7 @@
 	</div>
 </template>
 
-<script>
-	import routes from './_routes.js';
 
-	export default {
-		name: 'AppRoot',
-		data: function () {
-			return {
-				routes: routes,
-				currentUser: this.$root.currentUser,
-				breadcrumbs: {}
-			}
-		},
-		methods: {
-			goto_profile: function(){
-				this.$router.push('/user-profile')
-			}
-		}
-	}
-</script>
 
 <style>
 	.f-navbar {
@@ -47,3 +49,4 @@
 		margin-right: 1em;
 	}
 </style>
+

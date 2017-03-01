@@ -56,7 +56,7 @@
 
 <script>
 	import _ from 'lodash';
-	import mixins from './_mixins.js';
+	import mixins from './../vue-mixins.js';
 	export default {
 		name: 'forum-card',
 		data: function () {

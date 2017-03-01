@@ -75,7 +75,7 @@
 	import _ from 'lodash';
 	import notie from 'notie';
 	import request from 'superagent';
-	import mixins from './_mixins.js';
+	import mixins from './../vue-mixins.js';
 	export default {
 		name: 'theme_list',
 		data: function () {

@@ -1,10 +1,8 @@
-import user_profile from './user-profile.vue';
-
-import forum_group_list from './theme_list.vue'; // под замену
-import forum_list from './theme_list.vue'; // под замену
-import theme_list from './theme_list.vue'; // под замену
-import reply_list from './reply_list.vue';
-
+import forum_group_list from './vue-components/theme_list.vue'; // под замену
+import forum_list from './vue-components/theme_list.vue'; // под замену
+import theme_list from './vue-components/theme_list.vue'; // под замену
+import reply_list from './vue-components/reply_list.vue';
+import user_profile from './vue-components/user-profile.vue';
 
 
 export default [
