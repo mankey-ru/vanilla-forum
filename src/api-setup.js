@@ -1,7 +1,9 @@
 const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
+
 const dbtools = require('./dbtools.js');
+const apiUrl = require('./api-url.js');
 
 const C_FORUM_GROUPS = "forum_groups";
 const C_FORUMS = "forums";
@@ -9,16 +11,63 @@ const C_THEMES = "themes";
 const C_REPLIES = "replies";
 const C_USERS = "users";
 
-
 module.exports = function (app) {
-	dbtools.connect(function(err){
-		doSetup(app);
+
+	dbtools.connect(function(){
+		// those routes that declared in db callback function works only if their path contains a dot
+		// previously they worked fine
+		// issue happens only on webpack dev server (npm run dev)
+		// normal server (npm start) works ok as usual
+		// WHAT THE FUCK IS THIS
+		app.get('/somepath/wtf', function (req, res) {
+			res.status(200).send('OK1') // it NOT works, just draws / (mainpage)
+		})
+		app.get('/somepath/wtf.json', function (req, res) {
+			res.status(200).send('OK2') // it works
+		})
+	});
+	app.get('/somepath/wtf-ok', function (req, res) {
+		res.status(200).send('OK3') // it works
 	})
+
+
+	doSetup(app);
 }
 
 function doSetup(app) {
-	var db = dbtools.getDb();
+
+	//var db = dbtools.getDb();
 	app.use(bodyParser.json());
+
+	// Handling a case when app is built for Cordova, therefore api becomes remote
+	// Im not sure that Access-Control-Allow-Origin:* is OK for production
+	// see also api-url.js
+	var isHeroku = !!process.env.PORT
+	if (isHeroku) {
+		app.use(function (req, res, next) {
+			res.header("Access-Control-Allow-Origin", "*");
+			res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+			next();
+		})
+	}
+
+	app.get(apiUrl + 'commondata', function (req, res) {
+		dbtools.getDb().collection(C_USERS).aggregate([{
+			$sample: {
+				size: 1
+			}
+		}]).toArray(function (err, docs) {
+			if (err) {
+				handleError(res, err.message, "Failed to get user.");
+			}
+			else {
+				var result = {
+					currentUser: docs[0]
+				}
+				res.status(200).json(result);
+			}
+		});
+	});
 	/**		
 		-------------------------------------------------------------------
 									Темы
@@ -29,7 +78,7 @@ function doSetup(app) {
 		POST создать новый
 	*/
 
-	app.get("/api/themes", function (req, res) {
+	app.get(apiUrl + 'themes', function (req, res) {
 		var aRules = [{
 			$lookup: {
 				from: C_USERS,
@@ -58,7 +107,7 @@ function doSetup(app) {
 		}, {
 			$unwind: '$last_reply_author'
 		}];
-		db.collection(C_THEMES).aggregate(aRules).toArray(function (err, docs) {
+		dbtools.getDb().collection(C_THEMES).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
 				handleError(res, err.message, "Failed to get themes.");
 			}
@@ -68,7 +117,7 @@ function doSetup(app) {
 		});
 	});
 
-	app.post("/api/themes", function (req, res) {
+	app.post(apiUrl + 'themes', function (req, res) {
 		var author_id = ObjectID(req.body._TEMP_UID4DEL); // TODO определять на сервере конечно
 		var newTheme;
 
@@ -80,7 +129,7 @@ function doSetup(app) {
 			theme_id: null, // to be updated
 			date: new Date()
 		}
-		db.collection(C_REPLIES).insertOne(newReply, function (err, doc) {
+		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
 			if (err) {
 				handleError(res, err.message, 'Failed to create first reply');
 			}
@@ -107,7 +156,7 @@ function doSetup(app) {
 				}
 			}
 
-			db.collection(C_THEMES).insertOne(newTheme, function (err, doc) {
+			dbtools.getDb().collection(C_THEMES).insertOne(newTheme, function (err, doc) {
 				if (err) {
 					handleError(res, err.message, 'Failed to create new theme');
 				}
@@ -119,7 +168,7 @@ function doSetup(app) {
 		}
 
 		function updateFirstReply() {
-			db.collection(C_REPLIES).updateOne({
+			dbtools.getDb().collection(C_REPLIES).updateOne({
 				_id: newReply._id
 			}, newReply, function (err, doc) {
 				if (err) {
@@ -144,7 +193,7 @@ function doSetup(app) {
 		POST создать новый
 	*/
 
-	app.get("/api/replies/:theme_id", function (req, res) {
+	app.get(apiUrl + 'replies/:theme_id', function (req, res) {
 		var aRules = [{
 			$match: {
 				theme_id: ObjectID(req.params.theme_id)
@@ -159,7 +208,7 @@ function doSetup(app) {
 		}, {
 			$unwind: '$author'
 		}];
-		db.collection(C_REPLIES).aggregate(aRules).toArray(function (err, docs) {
+		dbtools.getDb().collection(C_REPLIES).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
 				handleError(res, err.message, "Failed to get themes.");
 			}
@@ -169,7 +218,7 @@ function doSetup(app) {
 		});
 	});
 
-	app.post("/api/replies", function (req, res) {
+	app.post(apiUrl + 'replies', function (req, res) {
 		var author_id = ObjectID(req.body._TEMP_UID4DEL); // TODO определять на сервере конечно
 		delete req.body._TEMP_UID4DEL;
 
@@ -188,7 +237,7 @@ function doSetup(app) {
 		newReply.theme_id = ObjectID(newReply.theme_id);
 		newReply.author_id = author_id;
 
-		db.collection(C_REPLIES).insertOne(newReply, function (err, doc) {
+		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
 			if (err) {
 				handleError(res, err.message, 'Failed to create reply');
 			}
@@ -204,8 +253,8 @@ function doSetup(app) {
 		DELETE	deletes contact by id
 	 */
 
-	app.get("/api/themes/:id", function (req, res) {
-		db.collection(C_THEMES).findOne({
+	app.get(apiUrl + 'themes/:id', function (req, res) {
+		dbtools.getDb().collection(C_THEMES).findOne({
 			_id: new ObjectID(req.params.id)
 		}, function (err, doc) {
 			if (err) {
@@ -217,11 +266,11 @@ function doSetup(app) {
 		});
 	});
 
-	app.put("/api/themes/:id", function (req, res) {
+	app.put(apiUrl + 'themes/:id', function (req, res) {
 		var updateDoc = req.body;
 		delete updateDoc._id;
 
-		db.collection(C_THEMES).updateOne({
+		dbtools.getDb().collection(C_THEMES).updateOne({
 			_id: new ObjectID(req.params.id)
 		}, updateDoc, function (err, doc) {
 			if (err) {
@@ -244,7 +293,7 @@ function doSetup(app) {
 		POST	создать новый
 	*/
 
-	app.get("/api/forums", function (req, res) {
+	app.get(apiUrl + 'forums', function (req, res) {
 		var aRules = [{
 			$lookup: {
 				from: C_THEMES,
@@ -273,7 +322,7 @@ function doSetup(app) {
 		}, {
 			$unwind: '$last_reply_author'
 		}];
-		db.collection(C_FORUMS).aggregate(aRules).toArray(function (err, docs) {
+		dbtools.getDb().collection(C_FORUMS).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
 				handleError(res, err.message, "Failed to get forums.");
 			}
@@ -284,7 +333,7 @@ function doSetup(app) {
 	});
 
 	/*app.delete("/contacts/:id", function (req, res) {
-		db.collection(C_THEMES).deleteOne({
+		dbtools.getDb().collection(C_THEMES).deleteOne({
 			_id: new ObjectID(req.params.id)
 		}, function (err, result) {
 			if (err) {
@@ -298,8 +347,8 @@ function doSetup(app) {
 
 
 
-	app.get("/api/users", function (req, res) {
-		db.collection(C_USERS).find({}).toArray(function (err, docs) {
+	app.get(apiUrl + 'test', function (req, res) {
+		dbtools.getDb().collection('trash').find({}).toArray(function (err, docs) {
 			if (err) {
 				handleError(res, err.message, "Failed to get users.");
 			}
@@ -309,60 +358,15 @@ function doSetup(app) {
 		});
 	});
 
-	app.get("/api/user.js", function (req, res) {
-		db.collection(C_USERS).aggregate([{$sample:{size:1}}]).toArray(function (err, docs) {
-			if (err) {
-				handleError(res, err.message, "Failed to get user.");
-			}
-			else {
-				res.set('Content-Type', 'application/javascript');
-				res.send('window.VANILLA_FORUM_CURRENT_USER = '+ JSON.stringify(docs[0]));
-			}
-		});
-	});
-
-	app.get("/api/test", function (req, res) {
-		db.collection('trash').find({}).toArray(function (err, docs) {
-			if (err) {
-				handleError(res, err.message, "Failed to get users.");
-			}
-			else {
-				res.status(200).json(docs);
-			}
-		});
-	});
-	app.post("/api/test", function (req, res) {
-		var newContact = req.body;
-		newContact.createDate = new Date();
-		newContact.theme_id = ObjectID(newContact.theme_id);
-
-		db.collection('trash').insertOne(newContact, function (err, doc) {
-			if (err) {
-				handleError(res, err.message, "Failed to create new contact.");
-			}
-			else {
-				res.status(201).json(doc.ops[0]);
-			}
-		});
-	});
+	// TODO NOT WORKING!11
+	/*app.use(function (req, res, next) {
+		res.status(404).send('<h1>Something went wrong</h1>')
+	})*/
 }
 
 function handleError(res, reason, message, code) {
-	console.log('REST API ERR: ' + reason);
+	console.log('API ERROR: ' + reason);
 	res.status(code || 500).json({
 		"error": message
 	});
 }
-
-
-/*
-	Как просто заставить Экспресс отдавать контент всем подряд
-	app.use(function (req, res, next) {
-		res.header("Access-Control-Allow-Origin", "*");
-		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-		next();
-	})
-
-
-	//app.use(express.static(__dirname + "/public"));
-*/

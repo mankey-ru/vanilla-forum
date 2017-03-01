@@ -1,112 +1,4 @@
-<template>
-	<div>
-		<h2>{{title}}</h2>
-		<br/>
-		<div v-show="msgList_loading" class="text-center">
-			<i class="spin spin-lg"></i>
-		</div>
-		<div v-show="!msgList_loading">
 
-			<div v-for="msg in msgList" v-bind:id="'reply-id-'+msg._id">
-				<div class="row" v-if="msg.rating < msg_rating_threshold  && !msg.unhide">
-					<div class="col-sm-24">
-						<div class="well well-sm">
-							Скрытое сообщение от пользователя {{msg.author.name}} &#160;&#160;
-							<a class="btn btn-link" v-on:click.prevent="msg_unhide(msg)">
-								Показать
-							</a>
-						</div>
-					</div>
-				</div>
-				<div class="row f-msg-wrap" v-else="">
-					<div class="col-sm-4 col-xs-8">
-						<div>
-							<a href="/" v-on:click.prevent="gotoProfile(msg.author)"><b>{{msg.author.name}}</b></a> 
-						</div> 
-
-						<img v-bind:src="msg.author.pic" class="f-userpic" />
-
-						<p>
-							<span class="label label-primary" title="Суммарный рейтинг комментариев пользователя">
-								Рейтинг: {{msg.author.rating_total}}
-							</span> &#160;
-							<small class="label label-success" v-if="msg.author.online">
-								онлайн
-							</small>
-						</p>
-
-						<!-- <button class="btn btn-link">Пожаловаться</button> -->
-					</div>
-					<div class="col-sm-20 col-xs-16">
-						<div class="row f-msg-toolbar-top">
-							<div class="col-sm-12">
-								<i v-if="msg.pending_add" class="spin f-msg-spin"></i>
-								<a v-else="" v-bind:href="'#' + $route.path + '?reply_id=' + msg._id">{{msg.date | dateTimeFormat}}</a>
-							</div>
-							<div class="col-sm-12 text-right">
-							</div>
-						</div>
-						<div class="f-msg-text-wrap">
-							<div class="well" v-html="msg.text"></div>
-						</div>
-						<div class="row f-msg-toolbar-bottom">
-							<div class="col-sm-10 col-xs-24">
-								<button v-on:click="msg_vote(msg, -1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === -1}">
-									<!-- <i class="glyphicon glyphicon-minus"></i> -->
-									<i class="glyphicon glyphicon-thumbs-down"></i>
-								</button>
-								<button class="btn btn-sm btn-link">
-									<b>{{msg.rating}}</b>
-								</button>
-								<button v-on:click="msg_vote(msg, 1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === 1}">
-									<!-- <i class="glyphicon glyphicon-plus"></i> -->
-									<i class="glyphicon glyphicon-thumbs-up"></i>
-								</button>
-							</div>
-							<div class="col-sm-4 col-xs-24">
-								<a v-if="msg.unhide" v-on:click="msg.unhide=false" class="btn btn-link">
-									Cкрыть снова
-								</a>
-							</div>
-							<div class="col-sm-10 col-xs-24 text-right">
-
-								<button v-on:click="msg_quote(msg)" class="btn btn-default">
-									<i class="glyphicon glyphicon-comment"></i> 
-									Цитата
-								</button> 
-								<button v-on:click="msg_reply(msg)" class="btn btn-default">
-									<i class="glyphicon glyphicon-share-alt"></i> 
-									Ответ
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-sm-24">
-					<br/><br/>
-						Отвечает <b>{{currentUser.name}}</b>
-					<br/>
-				</div>
-			</div>
-			<div class="f-editor row">
-				<div class="col-sm-24">
-					<textarea id="editor-textarea"></textarea>
-					<br/>
-				</div>
-				<div class="col-sm-24 text-right">					
-					<button v-on:click="msg_add" class="btn btn-primary btn-lg">
-						<i class="glyphicon glyphicon-send"></i>&#160; 
-						Отправить
-					</button>
-					<br/>
-					<small><i>Ctrl+enter</i></small> 
-				</div>
-			</div>
-		</div>
-	</div>
-</template>
 
 <script>
 	import mixins from './../vue-mixins.js';
@@ -315,6 +207,116 @@
 	}
 
 </script>
+
+<template>
+	<div>
+		<h2>{{title}}</h2>
+		<br/>
+		<div v-show="msgList_loading" class="text-center">
+			<i class="spin spin-lg"></i>
+		</div>
+		<div v-show="!msgList_loading">
+
+			<div v-for="msg in msgList" v-bind:id="'reply-id-'+msg._id">
+				<div class="row" v-if="msg.rating < msg_rating_threshold  && !msg.unhide">
+					<div class="col-sm-24">
+						<div class="well well-sm">
+							Скрытое сообщение от пользователя {{msg.author.name}} &#160;&#160;
+							<a class="btn btn-link" v-on:click.prevent="msg_unhide(msg)">
+								Показать
+							</a>
+						</div>
+					</div>
+				</div>
+				<div class="row f-msg-wrap" v-else="">
+					<div class="col-sm-4 col-xs-8">
+						<div>
+							<a href="/" v-on:click.prevent="gotoProfile(msg.author)"><b>{{msg.author.name}}</b></a> 
+						</div> 
+
+						<img v-bind:src="msg.author.pic" class="f-userpic" />
+
+						<p>
+							<span class="label label-primary" title="Суммарный рейтинг комментариев пользователя">
+								Рейтинг: {{msg.author.rating_total}}
+							</span> &#160;
+							<small class="label label-success" v-if="msg.author.online">
+								онлайн
+							</small>
+						</p>
+
+						<!-- <button class="btn btn-link">Пожаловаться</button> -->
+					</div>
+					<div class="col-sm-20 col-xs-16">
+						<div class="row f-msg-toolbar-top">
+							<div class="col-sm-12">
+								<i v-if="msg.pending_add" class="spin f-msg-spin"></i>
+								<a v-else="" v-bind:href="'#' + $route.path + '?reply_id=' + msg._id">{{msg.date | dateTimeFormat}}</a>
+							</div>
+							<div class="col-sm-12 text-right">
+							</div>
+						</div>
+						<div class="f-msg-text-wrap">
+							<div class="well" v-html="msg.text"></div>
+						</div>
+						<div class="row f-msg-toolbar-bottom">
+							<div class="col-sm-10 col-xs-24">
+								<button v-on:click="msg_vote(msg, -1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === -1}">
+									<!-- <i class="glyphicon glyphicon-minus"></i> -->
+									<i class="glyphicon glyphicon-thumbs-down"></i>
+								</button>
+								<button class="btn btn-sm btn-link">
+									<b>{{msg.rating}}</b>
+								</button>
+								<button v-on:click="msg_vote(msg, 1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === 1}">
+									<!-- <i class="glyphicon glyphicon-plus"></i> -->
+									<i class="glyphicon glyphicon-thumbs-up"></i>
+								</button>
+							</div>
+							<div class="col-sm-4 col-xs-24">
+								<a v-if="msg.unhide" v-on:click="msg.unhide=false" class="btn btn-link">
+									Cкрыть снова
+								</a>
+							</div>
+							<div class="col-sm-10 col-xs-24 text-right">
+
+								<button v-on:click="msg_quote(msg)" class="btn btn-default">
+									<i class="glyphicon glyphicon-comment"></i> 
+									Цитата
+								</button> 
+								<button v-on:click="msg_reply(msg)" class="btn btn-default">
+									<i class="glyphicon glyphicon-share-alt"></i> 
+									Ответ
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-24">
+					<br/><br/>
+						Отвечает <b>{{currentUser.name}}</b>
+					<br/>
+				</div>
+			</div>
+			<div class="f-editor row">
+				<div class="col-sm-24">
+					<textarea id="editor-textarea"></textarea>
+					<br/>
+				</div>
+				<div class="col-sm-24 text-right">					
+					<button v-on:click="msg_add" class="btn btn-primary btn-lg">
+						<i class="glyphicon glyphicon-send"></i>&#160; 
+						Отправить
+					</button>
+					<br/>
+					<small><i>Ctrl+enter</i></small> 
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
 
 <style scoped>
 	.f-msg-text-wrap {

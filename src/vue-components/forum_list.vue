@@ -1,3 +1,51 @@
+
+
+<script>
+	import _ from 'lodash';
+	import mixins from './../vue-mixins.js';
+	export default {
+		name: 'forum-card',
+		data: function () {
+			return {
+				title: 'Форумы ОАО «РЖД»',
+				forumList: [],
+				forumList_loading: true
+			}
+		},
+		methods: {
+			forum_fetch: function() {
+				this.forumList_loading = true;
+				var url = Math.random()>.1 ? 'backend-emu/forum-list.json' : '';
+				$.getJSON(url, {})
+				.done((data)=>{
+					this.forumList_loading = false;
+					if (data instanceof Array) {
+						for (let forum of data) {
+							this.forumList.push(getForum(forum));
+						}
+					}
+				})
+				.fail(()=>{
+					console.warn('Рандомная (10%) неудача отправки. Ждём секунду и пробуем ещё раз.');
+					setTimeout(this.forum_fetch, 1000);
+				})
+				.always(()=>{})
+			}
+		},
+		mixins: [mixins],
+		mounted: function(){
+			this.forum_fetch();
+		},
+		destroyed: function () {},		
+		beforeUpdate: function() {},
+		created: function(){}
+	}
+
+	function getForum(arg) {
+		return arg;
+	}
+</script>
+
 <template>
 	<div>
 		<h2>{{title}}</h2>
@@ -53,54 +101,6 @@
 		</table>
 	</div>
 </template>
-
-<script>
-	import _ from 'lodash';
-	import mixins from './../vue-mixins.js';
-	export default {
-		name: 'forum-card',
-		data: function () {
-			return {
-				title: 'Форумы ОАО «РЖД»',
-				forumList: [],
-				forumList_loading: true
-			}
-		},
-		methods: {
-			forum_fetch: function() {
-				this.forumList_loading = true;
-				var url = Math.random()>.1 ? 'backend-emu/forum-list.json' : '';
-				$.getJSON(url, {})
-				.done((data)=>{
-					this.forumList_loading = false;
-					if (data instanceof Array) {
-						for (let forum of data) {
-							this.forumList.push(getForum(forum));
-						}
-					}
-				})
-				.fail(()=>{
-					console.warn('Рандомная (10%) неудача отправки. Ждём секунду и пробуем ещё раз.');
-					setTimeout(this.forum_fetch, 1000);
-				})
-				.always(()=>{})
-			}
-		},
-		mixins: [mixins],
-		mounted: function(){
-			this.forum_fetch();
-		},
-		destroyed: function () {},		
-		beforeUpdate: function() {},
-		created: function(){}
-	}
-
-	function getForum(arg) {
-		return arg;
-	}
-	
-
-</script>
 
 <style>
 </style>

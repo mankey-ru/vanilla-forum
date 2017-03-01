@@ -1,6 +1,6 @@
 var path = require('path');
 var webpack = require('webpack');
-var apiSetup = require('./src/api.js');
+var apiSetup = require('./src/api-setup.js');
 
 var conf_browser = {
 	entry: './src/_main-browser.js',
@@ -38,7 +38,7 @@ var conf_browser = {
 		historyApiFallback: true,
 		noInfo: false,
 		contentBase: "www",
-		setup: apiSetup
+		setup: apiSetup // used also in _main-server.js
 	},
 	performance: {
 		hints: false // 'error'

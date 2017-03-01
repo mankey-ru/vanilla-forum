@@ -1,7 +1,7 @@
 var express = require('express');
 var app = express();
 
-require('./api.js')(app);
+require('./api-setup.js')(app); // used also webpack.config.js
 app.use(express.static(__dirname + './../www/'));
 
 var port = process.env.PORT || 8081;
