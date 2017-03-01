@@ -1,7 +1,4 @@
 const mongodb = require("mongodb");
-const mongouri = 'mongodb:\/\/vanilla-forum-user:iNx*Sdfb@ds145389.mlab.com:45389\/vanilla-forum-db';
-
-
 
 const MONGODB_URI_ENV_KEY = 'VANILLA_FORUM_MONGODB_URI';
 const mongoUri = process.env[MONGODB_URI_ENV_KEY];
