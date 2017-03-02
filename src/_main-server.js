@@ -10,6 +10,7 @@ app.get('/build-browser.js', function (req, res, next) {
 	res.set('Content-Encoding', 'gzip');
 	next();
 });
+// TODO same for css (bootstrap etc)
 
 require('./api-setup.js')(app); // used also webpack.config.js
 app.use(express.static(__dirname + './../www/'));
