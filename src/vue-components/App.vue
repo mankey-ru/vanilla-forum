@@ -25,9 +25,9 @@
 		</div> -->
 		<div class="row">
 			<div class="col-xs-12">
-				<button v-on:click="$router.push('/')" class="btn btn-link">
-					ЛОГО
-				</button>
+				<span v-on:click="$router.push('/')" style="font-size: 3em;cursor: pointer;">
+					<i class="glyphicon glyphicon-equalizer"></i> LOGO
+				</span>
 			</div>
 			<div class="col-xs-12 text-right">
 				<button v-on:click="goto_profile" class="btn btn-default">

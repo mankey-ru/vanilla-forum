@@ -9,6 +9,7 @@
 	window.$ = window.jQuery = $;	// для sceditor
 	var scroll = require('scroll');
 	var scrollDoc = require('scroll-doc')();
+	var apiUrl = require('./../api-url.js');
 
 	var editorInstance, $ed, $edWrap;
 
@@ -29,7 +30,7 @@
 			},
 			msg_fetch: function() {
 				this.msgList_loading = true;
-				$.getJSON('/api/replies/' + this.$route.params.theme_id)
+				$.getJSON(apiUrl + 'replies/' + this.$route.params.theme_id)
 				.done((data)=>{
 					this.msgList_loading = false;
 					if (data instanceof Array) {
@@ -65,17 +66,17 @@
 					text: bbcodeVal
 				}
 				request
-					.post('/api/replies')
-					.send(newMsgSrv)
-					.end((err, res)=>{
-						if (err || !res.body) {
-							notie.alert('error', 'Ошибка запроса', 3);
+				.post(apiUrl + 'replies')
+				.send(newMsgSrv)
+				.end((err, res)=>{
+					if (err || !res.body) {
+						notie.alert('error', 'Creating reply failed', 3);
 							this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
 						}
 						else {
-							notie.alert('success', 'Успех', 3);
+							notie.alert('success', 'Reply created', 3);
 							newMsg.pending_add = false;
-							// Actualizing some props to server values
+							// Actualizing some props to server values TODO
 							newMsg.date = res.body.date;
 							newMsg._id	= res.body._id;
 							editorInstance.val('');
@@ -94,24 +95,28 @@
 				msg.rating += val;
 				msg.voted = val;
 				msg.pending_vote = true;
-				var url = Math.random()>.1 ? 'backend-emu/ok.json' : '';
-				$.getJSON(url, {
-					msg_id: msg.id,
-					username: this.currentUser.name, 
-					value: val
-				})
-				.done((response)=>{
-						// получаем из ответа серверный рейтинг msg.rating = responce.rating
+
+				request
+				.post(apiUrl + 'vote')
+				.send({
+						author_id: this.currentUser._id, // TODO sure that should be done at server
+						reply_id: msg._id,
+						value: val
 					})
-				.fail(()=>{
-					notie.alert('error', 'Рандомная (10%) неудача отправки. Голос будет откачен.', 3);
-					msg.rating = ratingBackup;
-					msg.voted = votedBackup;
-					msg.author.rating_total = ratingTotalBackup;
-				})
-				.always(()=>{
-					msg.pending_vote = false;
-				})
+				.end((err, res)=>{
+					if (err || !res.body) {							
+						notie.alert('error', 'Vote failed', 3);
+						msg.rating = ratingBackup;
+						msg.voted = votedBackup;
+						msg.author.rating_total = ratingTotalBackup;
+					}
+					else {
+						notie.alert('success', 'Vote success', 3);
+							// TODO получаем из ответа серверный рейтинг msg.rating = response.rating
+							console.log(res.body)
+						}
+						msg.pending_vote = false;
+					});
 			},
 			msg_quote: function(msg){
 				var val = editorInstance.val();
@@ -183,12 +188,10 @@
 	function getMsg (arg) {
 		arg = arg || {};
 		var msg = _.defaultsDeep(arg, {
-			id: 0,
 			author: {
 				name: '',
 				id: 0,
 				online: false,
-				pic: 'userpics/' + (arg.author ? arg.author.id : 1) + '.png',
 				rating_total: 0
 			},
 			text: '',
@@ -261,17 +264,19 @@
 						</div>
 						<div class="row f-msg-toolbar-bottom">
 							<div class="col-sm-10 col-xs-24">
-								<button v-on:click="msg_vote(msg, -1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === -1}">
-									<!-- <i class="glyphicon glyphicon-minus"></i> -->
-									<i class="glyphicon glyphicon-thumbs-down"></i>
-								</button>
-								<button class="btn btn-sm btn-link">
-									<b>{{msg.rating}}</b>
-								</button>
-								<button v-on:click="msg_vote(msg, 1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === 1}">
-									<!-- <i class="glyphicon glyphicon-plus"></i> -->
-									<i class="glyphicon glyphicon-thumbs-up"></i>
-								</button>
+								<div v-if="currentUser._id!==msg.author._id">
+									<button v-on:click="msg_vote(msg, -1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === -1}">
+										<i class="glyphicon glyphicon-minus"></i>
+										<!-- <i class="glyphicon glyphicon-thumbs-down"></i> -->
+									</button>
+									<button class="btn btn-sm btn-link f-msg-rating">
+										<b>{{msg.rating}}</b>
+									</button>
+									<button v-on:click="msg_vote(msg, 1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === 1}">
+										<i class="glyphicon glyphicon-plus"></i> 
+										<!-- <i class="glyphicon glyphicon-thumbs-up"></i>-->
+									</button>
+								</div>
 							</div>
 							<div class="col-sm-4 col-xs-24">
 								<a v-if="msg.unhide" v-on:click="msg.unhide=false" class="btn btn-link">
@@ -296,7 +301,7 @@
 			<div class="row">
 				<div class="col-sm-24">
 					<br/><br/>
-						Отвечает <b>{{currentUser.name}}</b>
+					Отвечает <b>{{currentUser.name}}</b>
 					<br/>
 				</div>
 			</div>
@@ -321,6 +326,11 @@
 <style scoped>
 	.f-msg-text-wrap {
 		min-height: 6em;
+	}
+	.f-msg-rating {
+		min-width: 3.2em;
+		cursor: default;
+		text-decoration: none;
 	}
 	.f-msg-wrap {
 		padding-bottom: 1em;

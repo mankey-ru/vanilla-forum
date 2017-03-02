@@ -1,6 +1,7 @@
 const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
+const _ = require('lodash');
 
 const dbtools = require('./dbtools.js');
 const apiUrl = require('./api-url.js');
@@ -10,10 +11,11 @@ const C_FORUMS = "forums";
 const C_THEMES = "themes";
 const C_REPLIES = "replies";
 const C_USERS = "users";
+const C_VOTES = "rating_votes";
 
 module.exports = function (app) {
 
-	dbtools.connect(function(){
+	dbtools.connect(function () {
 		// those routes that declared in db callback function works only if their path contains a dot
 		// previously they worked fine
 		// issue happens only on webpack dev server (npm run dev)
@@ -58,7 +60,7 @@ function doSetup(app) {
 			}
 		}]).toArray(function (err, docs) {
 			if (err) {
-				handleError(res, err.message, "Failed to get user.");
+				handleError(res, err, "Failed to get user.");
 			}
 			else {
 				var result = {
@@ -109,7 +111,7 @@ function doSetup(app) {
 		}];
 		dbtools.getDb().collection(C_THEMES).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
-				handleError(res, err.message, "Failed to get themes.");
+				handleError(res, err, "Failed to get themes.");
 			}
 			else {
 				res.status(200).json(docs);
@@ -131,7 +133,7 @@ function doSetup(app) {
 		}
 		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
 			if (err) {
-				handleError(res, err.message, 'Failed to create first reply');
+				handleError(res, err, 'Failed to create first reply');
 			}
 			else {
 				newReply._id = ObjectID(doc.ops[0]._id);
@@ -158,7 +160,7 @@ function doSetup(app) {
 
 			dbtools.getDb().collection(C_THEMES).insertOne(newTheme, function (err, doc) {
 				if (err) {
-					handleError(res, err.message, 'Failed to create new theme');
+					handleError(res, err, 'Failed to create new theme');
 				}
 				else {
 					newReply.theme_id = ObjectID(doc.ops[0]._id);
@@ -172,7 +174,7 @@ function doSetup(app) {
 				_id: newReply._id
 			}, newReply, function (err, doc) {
 				if (err) {
-					handleError(res, err.message, 'Failed to update first reply');
+					handleError(res, err, 'Failed to update first reply');
 				}
 				else {
 					res.status(201).json({
@@ -210,7 +212,7 @@ function doSetup(app) {
 		}];
 		dbtools.getDb().collection(C_REPLIES).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
-				handleError(res, err.message, "Failed to get themes.");
+				handleError(res, err, "Failed to get themes.");
 			}
 			else {
 				res.status(200).json(docs);
@@ -226,7 +228,7 @@ function doSetup(app) {
 		var reqd = ['theme_id', 'text'];
 		for (let k of reqd) {
 			if (typeof req.body[k] === 'undefined') {
-				handleError(res, err.message, 'Not enough data (' + k + ')');
+				handleError(res, err, 'Not enough data (' + k + ')');
 				return;
 			}
 		}
@@ -239,12 +241,131 @@ function doSetup(app) {
 
 		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
 			if (err) {
-				handleError(res, err.message, 'Failed to create reply');
+				handleError(res, err, 'Failed to create reply');
 			}
 			else {
 				res.status(201).json(doc.ops[0]).end();
 			}
 		});
+	});
+
+	app.post(apiUrl + 'vote', function (req, res) {
+		req.body.author_id = ObjectID(req.body.author_id); // TODO определять на сервере конечно
+		req.body.reply_id = ObjectID(req.body.reply_id);
+		req.body.date = new Date();
+		req.body.value = req.body.value | 0;
+
+		var newVote = _.pick(req.body, ['author_id', 'reply_id', 'date', 'value']); // prevent sending bloating requests. 
+		// TODO make it api-wide
+		// TODO validate types also
+		// TODO make that stuff in a module
+
+		// Todo check if author votes for his own reply (send HTTP 400)
+		var db = dbtools.getDb();
+
+		db.collection(C_VOTES)
+			.update({
+				author_id: req.body.author_id,
+				reply_id: req.body.reply_id
+			}, newVote, {
+				upsert: true // insert if not exists, updates if exist
+			}, function (err, doc, upserted) {
+				if (err || !doc) {
+					handleError(res, err, 'Failed to ' + (upserted ? 'create' : 'update') + ' vote');
+				}
+				else {
+					// callback hell! TODO refactor to promises
+					updateReplyRating(req.body.reply_id);
+				}
+			});
+
+		function updateReplyRating(reply_id_str) {
+			var reply_id = ObjectID(reply_id_str);
+			db.collection(C_VOTES)
+				.find({
+					reply_id: reply_id
+				})
+				.toArray(function (err, votes) {
+					if (err || !votes) {
+						handleError(res, err, 'Failed to find all votes for current reply');
+					}
+					else {
+						var rating = 0;
+						for (let i = 0; i < votes.length; i++) {
+							rating += votes[i].value | 0;
+						}
+						// ----------------------------------
+						db.collection(C_REPLIES)
+							.update({
+								_id: reply_id
+							}, {
+								$set: {
+									rating: rating
+								}
+							}, function (err, doc) {
+								if (err || !doc) {
+									handleError(res, err, 'Failed to update rating of voted reply');
+								}
+								else {
+									updateReplyAuthorRating(reply_id);
+								}
+							});
+					}
+				});
+		}
+
+		function updateReplyAuthorRating(reply_id) { // everybody loves cascade hell!
+			// ----------------------------------
+			db.collection(C_REPLIES)
+				.findOne({
+					_id: reply_id
+				}, function (err, doc) {
+					if (err || !doc) {
+						handleError(res, err, 'Failed to find author of voted reply');
+					}
+					else {
+						var reply_author_id = ObjectID(doc.author_id);
+						// ----------------------------------
+						db.collection(C_REPLIES)
+							.find({
+								author_id: reply_author_id
+							})
+							.toArray(function (err, docs) {
+								if (err || !docs) {
+									handleError(res, err, 'Failed to find all replies of author of voted reply');
+								}
+								else {
+									// updating authors rating
+									// it could be done incremental way
+									// but lets check first if full recalculation is fast enough
+									var rating_total = 0;
+									for (let i = 0; i < docs.length; i++) {
+										rating_total += docs[i].rating | 0;
+									}
+									// ----------------------------------
+									db.collection(C_USERS)
+										.update({
+											_id: reply_author_id
+										}, {
+											$set: {
+												rating_total: rating_total
+											}
+										}, function (err, doc) {
+											if (err || !doc) {
+												handleError(res, err, 'Failed to update rating_total of author of voted reply');
+											}
+											else {
+												res.status(201).json(doc).end();
+											}
+										});
+								}
+							});
+					}
+				});
+		}
+
+
+
 	});
 
 	/*  
@@ -258,7 +379,7 @@ function doSetup(app) {
 			_id: new ObjectID(req.params.id)
 		}, function (err, doc) {
 			if (err) {
-				handleError(res, err.message, "Failed to get contact");
+				handleError(res, err, "Failed to get contact");
 			}
 			else {
 				res.status(200).json(doc);
@@ -274,7 +395,7 @@ function doSetup(app) {
 			_id: new ObjectID(req.params.id)
 		}, updateDoc, function (err, doc) {
 			if (err) {
-				handleError(res, err.message, "Failed to update contact");
+				handleError(res, err, "Failed to update contact");
 			}
 			else {
 				res.status(204).end();
@@ -324,7 +445,7 @@ function doSetup(app) {
 		}];
 		dbtools.getDb().collection(C_FORUMS).aggregate(aRules).toArray(function (err, docs) {
 			if (err) {
-				handleError(res, err.message, "Failed to get forums.");
+				handleError(res, err, "Failed to get forums.");
 			}
 			else {
 				res.status(200).json(docs);
@@ -337,7 +458,7 @@ function doSetup(app) {
 			_id: new ObjectID(req.params.id)
 		}, function (err, result) {
 			if (err) {
-				handleError(res, err.message, "Failed to delete contact");
+				handleError(res, err, "Failed to delete contact");
 			}
 			else {
 				res.status(204).end();
@@ -350,7 +471,7 @@ function doSetup(app) {
 	app.get(apiUrl + 'test', function (req, res) {
 		dbtools.getDb().collection('trash').find({}).toArray(function (err, docs) {
 			if (err) {
-				handleError(res, err.message, "Failed to get users.");
+				handleError(res, err, "Failed to get users.");
 			}
 			else {
 				res.status(200).json(docs);
@@ -364,8 +485,9 @@ function doSetup(app) {
 	})*/
 }
 
-function handleError(res, reason, message, code) {
-	console.log('API ERROR: ' + reason);
+function handleError(res, errObjOrStr, message, code) {
+	var reason = !!errObjOrStr && errObjOrStr.message ? errObjOrStr.message : errObjOrStr;
+	console.log('API ERROR: ' + reason, message);
 	res.status(code || 500).json({
 		"error": message
 	});
