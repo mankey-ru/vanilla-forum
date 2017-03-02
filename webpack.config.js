@@ -65,6 +65,7 @@ if (process.env.NODE_ENV === 'production') {
 		new webpack.LoaderOptionsPlugin({
 			minimize: true
 		})
+		// TODO add https://github.com/webpack-contrib/compression-webpack-plugin
 	])
 }
 

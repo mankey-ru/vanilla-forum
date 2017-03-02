@@ -2,6 +2,7 @@ const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
 const _ = require('lodash');
+const compression = require('compression')
 
 const dbtools = require('./dbtools.js');
 const apiUrl = require('./api-url.js');
@@ -38,20 +39,21 @@ module.exports = function (app) {
 
 function doSetup(app) {
 
-	//var db = dbtools.getDb();
+
 	app.use(bodyParser.json());
+	app.use(compression()) // with default settings effect was almost triple (232 vs 767 KB)
 
 	// Handling a case when app is built for Cordova, therefore api becomes remote
 	// Im not sure that Access-Control-Allow-Origin:* is OK for production
 	// see also api-url.js
-	var isHeroku = !!process.env.PORT
+	/*var isHeroku = !!process.env.PORT
 	if (isHeroku) {
 		app.use(function (req, res, next) {
 			res.header("Access-Control-Allow-Origin", "*");
 			res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
 			next();
 		})
-	}
+	}*/
 
 	app.get(apiUrl + 'commondata', function (req, res) {
 		dbtools.getDb().collection(C_USERS).aggregate([{
