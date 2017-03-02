@@ -33,7 +33,8 @@
 </template>
 
 <script>
-	import $ from 'jquery';
+	import $ from 'jquery';	
+	var apiUrl = require('./../api-url.js');
 
 	var Comp = {
 		name: 'user-profile',
@@ -46,8 +47,7 @@
 			getUser: function(){
 				var user_id = this.$router.currentRoute.params.user_id;
 				if (user_id) {
-					var url = Math.random()>.1 ? 'backend-emu/user-info.json' : '';
-					$.getJSON(url, {})
+					$.getJSON(apiUrl + 'user/' + user_id, {}) 
 					.done((data)=>{
 						if (data instanceof Object) {
 							this.user = data

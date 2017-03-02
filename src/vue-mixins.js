@@ -6,7 +6,7 @@ export default {
 			this.$router.push({
 				name: 'user-profile-any',
 				params: {
-					user_id: author.id
+					user_id: author._id
 				}
 			})
 		},
@@ -14,7 +14,7 @@ export default {
 			this.$router.push({
 				name: 'theme_list',
 				params: {
-					forum_id: forum.id
+					forum_id: forum._id
 				}
 			})
 		},

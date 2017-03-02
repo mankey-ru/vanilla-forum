@@ -76,6 +76,20 @@ function doSetup(app) {
 			}
 		});
 	});
+
+	app.get(apiUrl + 'user/:user_id', function (req, res) {
+		var user_id = ObjectID(req.params.user_id);
+		dbtools.getDb().collection(C_USERS).findOne({
+			_id: user_id
+		}, function (err, doc) {
+			if (err) {
+				handleError(res, err, "Failed to get user.");
+			}
+			else {
+				res.status(200).json(doc);
+			}
+		});
+	});
 	/**		
 		-------------------------------------------------------------------
 									Темы

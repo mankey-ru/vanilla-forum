@@ -14,7 +14,7 @@
 	var editorInstance, $ed, $edWrap;
 
 	export default {
-		name: 'forum-card',
+		name: 'reply_list',
 		data: function () {
 			return {
 				msg_rating_threshold: 0,
