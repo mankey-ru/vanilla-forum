@@ -104,16 +104,19 @@
 						value: val
 					})
 				.end((err, res)=>{
-					if (err || !res.body) {							
-						notie.alert('error', 'Vote failed', 3);
-						msg.rating = ratingBackup;
-						msg.voted = votedBackup;
-						msg.author.rating_total = ratingTotalBackup;
-					}
-					else {
-						notie.alert('success', 'Vote success', 3);
-							// TODO получаем из ответа серверный рейтинг msg.rating = response.rating
-							console.log(res.body)
+						if (err || !res.body) {							
+							notie.alert('error', 'Vote failed', 3);
+							msg.rating = ratingBackup;
+							msg.voted = votedBackup;
+							msg.author.rating_total = ratingTotalBackup;
+						}
+						else {
+							notie.alert('success', 'Vote success', 3);
+							// actualizing some props to server values
+							// if values is returning to prev then probably current user already voted
+							// TODO update all replies with this author
+							msg.author.rating_total = res.body.author_rating_total;
+							msg.rating = res.body.reply_rating;
 						}
 						msg.pending_vote = false;
 					});

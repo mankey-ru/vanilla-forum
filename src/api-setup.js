@@ -290,9 +290,9 @@ function doSetup(app) {
 						handleError(res, err, 'Failed to find all votes for current reply');
 					}
 					else {
-						var rating = 0;
+						var reply_rating = 0;
 						for (let i = 0; i < votes.length; i++) {
-							rating += votes[i].value | 0;
+							reply_rating += votes[i].value | 0;
 						}
 						// ----------------------------------
 						db.collection(C_REPLIES)
@@ -300,21 +300,21 @@ function doSetup(app) {
 								_id: reply_id
 							}, {
 								$set: {
-									rating: rating
+									rating: reply_rating
 								}
 							}, function (err, doc) {
 								if (err || !doc) {
 									handleError(res, err, 'Failed to update rating of voted reply');
 								}
 								else {
-									updateReplyAuthorRating(reply_id);
+									updateReplyAuthorRating(reply_id, reply_rating);
 								}
 							});
 					}
 				});
 		}
 
-		function updateReplyAuthorRating(reply_id) { // everybody loves cascade hell!
+		function updateReplyAuthorRating(reply_id, reply_rating) { // everybody loves cascade hell!
 			// ----------------------------------
 			db.collection(C_REPLIES)
 				.findOne({
@@ -355,7 +355,10 @@ function doSetup(app) {
 												handleError(res, err, 'Failed to update rating_total of author of voted reply');
 											}
 											else {
-												res.status(201).json(doc).end();
+												res.status(201).json({
+													author_rating_total: rating_total,
+													reply_rating: reply_rating
+												}).end();
 											}
 										});
 								}
