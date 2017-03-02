@@ -1,6 +1,7 @@
 var path = require('path');
 var webpack = require('webpack');
 var apiSetup = require('./src/api-setup.js');
+var CompressionPlugin = require('compression-webpack-plugin');
 
 var conf_browser = {
 	entry: './src/_main-browser.js',
@@ -64,8 +65,16 @@ if (process.env.NODE_ENV === 'production') {
 		}),
 		new webpack.LoaderOptionsPlugin({
 			minimize: true
+		}),
+		// https://github.com/webpack-contrib/compression-webpack-plugin
+		new CompressionPlugin({
+			asset: "[path].gz[query]",
+			algorithm: "gzip",
+			test: /\.js$|\.css$|\.html$/,
+			threshold: 10240,
+			minRatio: 0.8
 		})
-		// TODO add https://github.com/webpack-contrib/compression-webpack-plugin
+		
 	])
 }
 

@@ -7,5 +7,5 @@ plugins
 platforms/
 build-server.js
 build-server.js.map
-#www/build-browser.js
+www/build-browser.js
 www/build-browser.js.map

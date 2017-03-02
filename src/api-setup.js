@@ -2,7 +2,6 @@ const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
 const _ = require('lodash');
-const compression = require('compression')
 
 const dbtools = require('./dbtools.js');
 const apiUrl = require('./api-url.js');
@@ -41,7 +40,12 @@ function doSetup(app) {
 
 
 	app.use(bodyParser.json());
-	app.use(compression()) // with default settings effect was almost triple (232 vs 767 KB)
+
+	// app.use(require('compression')) 
+	// with default settings it decreases page size (232 vs 767 KB)
+	// but increases CPU load and therefore page speed
+	// i preferred build-time compression, see _main-server.js
+	// compression invocation is not here because its not needed for webpack dev server
 
 	// Handling a case when app is built for Cordova, therefore api becomes remote
 	// Im not sure that Access-Control-Allow-Origin:* is OK for production
