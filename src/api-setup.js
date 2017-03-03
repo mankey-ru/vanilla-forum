@@ -2,6 +2,7 @@ const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
 const _ = require('lodash');
+const waterfall = require('async/waterfall')
 
 const dbtools = require('./dbtools.js');
 const apiUrl = require('./api-url.js');
@@ -280,136 +281,131 @@ function doSetup(app) {
 		// TODO validate types also
 		// TODO make that stuff in a module
 
-		// Todo check if author votes for his own reply (send HTTP 400)
+		// TODO think about rollback
+		// TODO check if author votes for his own reply (send HTTP 400)
 		var db = dbtools.getDb();
 
-		/*var gen = gen();
-		gen.next();
-
-		function* gen() {
-			var user_$id;
-			yield db.collection('users').find({}).toArray(function (err, docs) {
-				var usr = docs[1];
-				user_$id = ObjectID(usr._id);
-				console.log(' Пользователь ' + usr.name + ', id=' + user_$id);
-				console.log(' Ищем ответы пользователя с $id=' + user_$id);
-				gen.next();
-			});
-
-			yield db.collection('replies').find({
-				author_id: user_$id
-			}).toArray(function (err, docs) {
-				console.log(' Найдено сообщений данного пользователя: ' + docs.length)
-				process.exit(1);
-			});
-		};*/
-
-
-		db.collection(C_VOTES)
-			.update({
-				author_id: req.body.author_id,
-				reply_id: req.body.reply_id
-			}, newVote, {
-				upsert: true // insert if not exists, updates if exist
-			}, function (err, doc, upserted) {
-				if (err || !doc) {
+		var rating_total = 0;
+		var reply_rating = 0;
+		var reply_author_id;
+		waterfall([
+				// 1. Create|Update vote document
+				function (next) {
+					db.collection(C_VOTES)
+						.update({
+							author_id: newVote.author_id,
+							reply_id: newVote.reply_id
+						}, newVote, {
+							upsert: true // insert if not exists, updates if exist
+						}, function (err, doc, upserted) {
+							next(err || !doc);
+						});
+				},
+				// 2. Find all votes for current reply and recalculate its rating
+				function (next) {
+					// sure it could be done incremental way
+					// but lets check first if full recalculation is fast enough
+					db.collection(C_VOTES)
+						.find({
+							reply_id: newVote.reply_id
+						})
+						.toArray(function (err, votes) {
+							if (err || !votes) {
+								handleError(res, err, 'Failed to find all votes for current reply');
+							}
+							else {
+								for (let i = 0; i < votes.length; i++) {
+									reply_rating += votes[i].value | 0;
+								}
+								next();
+							}
+						});
+				},
+				// 3. Update rating of a current reply
+				function (next) {
+					db.collection(C_REPLIES)
+						.update({
+							_id: newVote.reply_id
+						}, {
+							$set: {
+								rating: reply_rating
+							}
+						}, function (err, doc) {
+							if (err || !doc) {
+								handleError(res, err, 'Failed to update rating of voted reply');
+							}
+							else {
+								next();
+							}
+						});
+				},
+				// 4. Find author of voted reply
+				function (next) {
+					db.collection(C_REPLIES)
+						.findOne({
+							_id: newVote.reply_id
+						}, function (err, doc) {
+							if (err || !doc) {
+								handleError(res, err, 'Failed to find author of voted reply');
+							}
+							else {
+								reply_author_id = ObjectID(doc.author_id);
+								next()
+							}
+						});
+				},
+				// 5. Find all replies of author of voted reply and recalculate his rating
+				function (next) {
+					db.collection(C_REPLIES)
+						.find({
+							author_id: reply_author_id
+						})
+						.toArray(function (err, docs) {
+							if (err || !docs) {
+								handleError(res, err, 'Failed to find all replies of author of voted reply');
+							}
+							else {
+								for (let i = 0; i < docs.length; i++) {
+									rating_total += docs[i].rating | 0;
+								}
+								next()
+							}
+						});
+				},
+				// 6. Update rating of author of voted reply
+				function (next) {
+					// sure it could be done incremental way
+					// but lets check first if full recalculation is fast enough
+					db.collection(C_USERS)
+						.update({
+							_id: reply_author_id
+						}, {
+							$set: {
+								rating_total: rating_total
+							}
+						}, function (err, doc) {
+							if (err || !doc) {
+								handleError(res, err, 'Failed to update rating_total of author of voted reply');
+							}
+							else {
+								next(null)
+							}
+						});
+				}
+			],
+			// 
+			function (err, data) { // can be more args
+				if (err) {
+					console.log('Error! Reason ' + err, arguments)
 					handleError(res, err, 'Failed to ' + (upserted ? 'create' : 'update') + ' vote');
 				}
 				else {
-					// callback hell! TODO refactor to promises
-					updateReplyRating(req.body.reply_id);
+					res.status(201).json({
+						author_rating_total: rating_total,
+						reply_rating: reply_rating
+					}).end();
 				}
-			});
-
-		function updateReplyRating(reply_id_str) {
-			var reply_id = ObjectID(reply_id_str);
-			db.collection(C_VOTES)
-				.find({
-					reply_id: reply_id
-				})
-				.toArray(function (err, votes) {
-					if (err || !votes) {
-						handleError(res, err, 'Failed to find all votes for current reply');
-					}
-					else {
-						var reply_rating = 0;
-						for (let i = 0; i < votes.length; i++) {
-							reply_rating += votes[i].value | 0;
-						}
-						// ----------------------------------
-						db.collection(C_REPLIES)
-							.update({
-								_id: reply_id
-							}, {
-								$set: {
-									rating: reply_rating
-								}
-							}, function (err, doc) {
-								if (err || !doc) {
-									handleError(res, err, 'Failed to update rating of voted reply');
-								}
-								else {
-									updateReplyAuthorRating(reply_id, reply_rating);
-								}
-							});
-					}
-				});
-		}
-
-		function updateReplyAuthorRating(reply_id, reply_rating) { // everybody loves cascade hell!
-			// ----------------------------------
-			db.collection(C_REPLIES)
-				.findOne({
-					_id: reply_id
-				}, function (err, doc) {
-					if (err || !doc) {
-						handleError(res, err, 'Failed to find author of voted reply');
-					}
-					else {
-						var reply_author_id = ObjectID(doc.author_id);
-						// ----------------------------------
-						db.collection(C_REPLIES)
-							.find({
-								author_id: reply_author_id
-							})
-							.toArray(function (err, docs) {
-								if (err || !docs) {
-									handleError(res, err, 'Failed to find all replies of author of voted reply');
-								}
-								else {
-									// updating authors rating
-									// it could be done incremental way
-									// but lets check first if full recalculation is fast enough
-									var rating_total = 0;
-									for (let i = 0; i < docs.length; i++) {
-										rating_total += docs[i].rating | 0;
-									}
-									// ----------------------------------
-									db.collection(C_USERS)
-										.update({
-											_id: reply_author_id
-										}, {
-											$set: {
-												rating_total: rating_total
-											}
-										}, function (err, doc) {
-											if (err || !doc) {
-												handleError(res, err, 'Failed to update rating_total of author of voted reply');
-											}
-											else {
-												res.status(201).json({
-													author_rating_total: rating_total,
-													reply_rating: reply_rating
-												}).end();
-											}
-										});
-								}
-							});
-					}
-				});
-		}
-
-
+			})
 
 	});
 
