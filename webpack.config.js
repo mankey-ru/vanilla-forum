@@ -4,7 +4,10 @@ var apiSetup = require('./src/api-setup.js');
 var CompressionPlugin = require('compression-webpack-plugin');
 
 var conf_browser = {
-	entry: './src/_main-browser.js',
+	// I used babel-regenerator-runtime instead of bundle babel-polyfill
+	// because right now I dont need all polyfills
+	// http://stackoverflow.com/a/36590887
+	entry: [/*'babel-regenerator-runtime',*/ './src/_main-browser.js'],
 	output: {
 		path: path.resolve(__dirname, './www/'),
 		publicPath: '', // ахтунг! это путь не на ФС, а из урла. Если он кривой, не открывается сокет-коннект (см. консоль) и следовательно не работает HMR

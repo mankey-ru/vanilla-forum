@@ -283,6 +283,28 @@ function doSetup(app) {
 		// Todo check if author votes for his own reply (send HTTP 400)
 		var db = dbtools.getDb();
 
+		/*var gen = gen();
+		gen.next();
+
+		function* gen() {
+			var user_$id;
+			yield db.collection('users').find({}).toArray(function (err, docs) {
+				var usr = docs[1];
+				user_$id = ObjectID(usr._id);
+				console.log(' Пользователь ' + usr.name + ', id=' + user_$id);
+				console.log(' Ищем ответы пользователя с $id=' + user_$id);
+				gen.next();
+			});
+
+			yield db.collection('replies').find({
+				author_id: user_$id
+			}).toArray(function (err, docs) {
+				console.log(' Найдено сообщений данного пользователя: ' + docs.length)
+				process.exit(1);
+			});
+		};*/
+
+
 		db.collection(C_VOTES)
 			.update({
 				author_id: req.body.author_id,
