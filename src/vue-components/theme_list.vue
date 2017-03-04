@@ -18,34 +18,25 @@
 						<td>
 							<a href="#" v-on:click.prevent="gotoTheme(th)">{{th.name}}</a>
 						</td>
-						<td>
-							<span class="label label-primary" v-if="th.pinned" style="margin-right:.5em">
-								<i class="glyphicon glyphicon-pushpin" ></i> Тема прикреплена
+						<td class="nwr">
+							<span title="Тема прикреплена" class="label label-primary" v-if="th.pinned" style="margin-right:.5em">
+								<i class="glyphicon glyphicon-pushpin"></i> 
 							</span>
 							<br v-if="th.pinned && th.premoderation"/>
-							<span class="label label-primary" v-if="th.premoderation">
-								<i class="glyphicon glyphicon-eye-open"></i> Премодерация 
+							<span title="Тема премодерируется" class="label label-primary" v-if="th.premoderation">
+								<i class="glyphicon glyphicon-eye-open"></i>  
 							</span>
 						</td>
 						<td class="text-center">{{th.cnt_replies}}</td>
 						<td class="text-center">{{th.cnt_views}}</td>
-						<td style="font-size:.8em;">
-							<table>
-								<tr>
-									<td>Дата</td>
-									<td>
-										{{th.last_reply.date | dateTimeFormat}}
-									</td>
-								</tr>
-								<tr>
-									<td>Автор &#160;</td>
-									<td>
-										<a href="#" v-on:click.prevent="gotoProfile(th.last_reply_author)">
-											{{th.last_reply_author.name}}
-										</a>
-									</td>
-								</tr>
-							</table>
+						<td class="th-list-lastcol">
+							<div class="nwr">
+							{{th.last_reply.date | dateTimeFormat}}
+							</div>
+
+							<a href="#" v-on:click.prevent="gotoProfile(th.last_reply_author)">
+								{{th.last_reply_author.name}}
+							</a>
 						</td>
 					</tr>
 				</tbody>
@@ -118,7 +109,7 @@
 				this.newTheme_loading = true;
 				this.newTheme._TEMP_UID4DEL = this.$root.currentUser._id; // TODO определять на сервере конечно
 				request
-				.post('/api/themes')
+				.post(apiUrl + 'themes')
 				.send(this.newTheme)
 				.end((err, res)=>{
 					console.log(err, res)
@@ -162,4 +153,7 @@
 </script>
 
 <style>
+	.th-list-lastcol, .th-list-lastcol a {
+		
+	}
 </style>

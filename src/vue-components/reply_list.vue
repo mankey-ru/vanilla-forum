@@ -1,6 +1,5 @@
-
-
 <script>
+	const apiUrl = require('./../api-url.js');
 	import mixins from './../vue-mixins.js';
 	import notie from 'notie';
 	import _ from 'lodash';
@@ -9,7 +8,6 @@
 	window.$ = window.jQuery = $;	// для sceditor
 	var scroll = require('scroll');
 	var scrollDoc = require('scroll-doc')();
-	var apiUrl = require('./../api-url.js');
 
 	var editorInstance, $ed, $edWrap;
 
@@ -19,7 +17,6 @@
 			return {
 				msg_rating_threshold: 0,
 				title: 'Название темы форума',
-				currentUser: this.$root.$data.currentUser,
 				msgList: [],
 				msgList_loading: true
 			}
@@ -61,7 +58,6 @@
 				newMsg.pending_add = true;
 				this.msgList.push(newMsg);
 				var newMsgSrv = {
-					_TEMP_UID4DEL: this.currentUser._id, // TODO sure that should be done at server
 					theme_id: this.$route.params.theme_id,
 					text: bbcodeVal
 				}
@@ -99,19 +95,18 @@
 				request
 				.post(apiUrl + 'vote')
 				.send({
-						author_id: this.currentUser._id, // TODO sure that should be done at server
-						reply_id: msg._id,
-						value: val
-					})
+					reply_id: msg._id,
+					value: val
+				})
 				.end((err, res)=>{
-						if (err || !res.body) {							
-							notie.alert('error', 'Vote failed', 3);
-							msg.rating = ratingBackup;
-							msg.voted = votedBackup;
-							msg.author.rating_total = ratingTotalBackup;
-						}
-						else {
-							notie.alert('success', 'Vote success', 3);
+					if (err || !res.body) {							
+						notie.alert('error', 'Vote failed', 3);
+						msg.rating = ratingBackup;
+						msg.voted = votedBackup;
+						msg.author.rating_total = ratingTotalBackup;
+					}
+					else {
+						notie.alert('success', 'Vote success', 3);
 							// actualizing some props to server values
 							// if values is returning to prev then probably current user already voted
 							// TODO update all replies with this author
@@ -183,6 +178,11 @@
 						}
 					}
 				})
+			}
+		},
+		computed: {
+			currentUser: function(){
+				return this.$root.$data.currentUser
 			}
 		}
 	}
@@ -267,7 +267,7 @@
 						</div>
 						<div class="row f-msg-toolbar-bottom">
 							<div class="col-sm-10 col-xs-24">
-								<div v-if="currentUser._id!==msg.author._id">
+								<div v-if="currentUser && currentUser._id!==msg.author._id">
 									<button v-on:click="msg_vote(msg, -1)" v-bind:disabled="msg.pending_vote" class="btn btn-sm btn-default" v-bind:class="{'active':msg.voted === -1}">
 										<i class="glyphicon glyphicon-minus"></i>
 										<!-- <i class="glyphicon glyphicon-thumbs-down"></i> -->
@@ -301,14 +301,23 @@
 					</div>
 				</div>
 			</div>
-			<div class="row">
-				<div class="col-sm-24">
-					<br/><br/>
-					Отвечает <b>{{currentUser.name}}</b>
-					<br/>
+			<div v-if="currentUser">
+				<div class="row">
+					<div class="col-sm-24">
+						<br/><br/>
+						Отвечает <b>{{currentUser.name}}</b>
+						<br/>
+					</div>
 				</div>
 			</div>
-			<div class="f-editor row">
+			<div v-else="">
+				<br/>
+				<br/>
+				<div class="well">
+					Please <a class="link-dotted">sign in</a> to post reply
+				</div>
+			</div>
+			<div v-show="currentUser" class="f-editor row">
 				<div class="col-sm-24">
 					<textarea id="editor-textarea"></textarea>
 					<br/>
@@ -322,6 +331,7 @@
 					<small><i>Ctrl+enter</i></small> 
 				</div>
 			</div>
+
 		</div>
 	</div>
 </template>

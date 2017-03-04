@@ -1,11 +1,15 @@
-const bodyParser = require("body-parser");
 const mongodb = require("mongodb");
 const ObjectID = mongodb.ObjectID;
-const _ = require('lodash');
-const waterfall = require('async/waterfall')
+const bodyParser = require("body-parser");
+
+const passport = require('passport')
+const LocalStrategy = require('passport-local').Strategy;
 
 const dbtools = require('./dbtools.js');
 const apiUrl = require('./api-url.js');
+
+const _ = require('lodash');
+const waterfall = require('async/waterfall')
 
 const C_FORUM_GROUPS = "forum_groups";
 const C_FORUMS = "forums";
@@ -15,66 +19,104 @@ const C_USERS = "users";
 const C_VOTES = "rating_votes";
 
 module.exports = function (app) {
-
-	dbtools.connect(function () {
-		// those routes that declared in db callback function works only if their path contains a dot
-		// previously they worked fine
-		// issue happens only on webpack dev server (npm run dev)
-		// normal server (npm start) works ok as usual
-		// WHAT THE FUCK IS THIS
-		app.get('/somepath/wtf', function (req, res) {
-			res.status(200).send('OK1') // it NOT works, just draws / (mainpage)
-		})
-		app.get('/somepath/wtf.json', function (req, res) {
-			res.status(200).send('OK2') // it works
-		})
-	});
-	app.get('/somepath/wtf-ok', function (req, res) {
-		res.status(200).send('OK3') // it works
-	})
-
-
-	doSetup(app);
+	dbtools.connect();
+	app.use(bodyParser.json());
+	setupAuth(app);
+	setupApi(app);
 }
 
-function doSetup(app) {
+function setupAuth(app) {
+	// Local auth
+	// http://passportjs.org/docs/username-password
 
 
-	app.use(bodyParser.json());
 
-	// app.use(require('compression')) 
-	// with default settings it decreases page size (232 vs 767 KB)
-	// but increases CPU load and therefore page speed
-	// i preferred build-time compression, see _main-server.js
-	// compression invocation is not here because its not needed for webpack dev server
+	passport.use(new LocalStrategy(
+		function (email, pwd, done) {
+			dbtools.getDb().collection(C_USERS).findOne({
+				email: email
+			}, function (err, user) {
+				if (err) {
+					return done(err);
+				}
+				if (!user || !validPassword(user, pwd)) {
+					return done(null, false, {
+						message: 'XXXX'
+					});
+				}
+				return done(null, user);
+			});
+		}
+	));
 
-	// Handling a case when app is built for Cordova, therefore api becomes remote
-	// Im not sure that Access-Control-Allow-Origin:* is OK for production
-	// see also api-url.js
-	/*var isHeroku = !!process.env.PORT
-	if (isHeroku) {
-		app.use(function (req, res, next) {
-			res.header("Access-Control-Allow-Origin", "*");
-			res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-			next();
+	function validPassword(user, pwd) {
+		return pwd === user.pwd;
+	}
+
+	// Configure Passport authenticated session persistence.
+	passport.serializeUser(function (user, cb) {
+		cb(null, user._id);
+	});
+
+	passport.deserializeUser(function (_id, cb) {
+		dbtools.getDb().collection(C_USERS).findOne({
+			_id: ObjectID(_id)
+		}, function (err, user) {
+			if (err) {
+				return cb(err);
+			}
+			cb(null, user);
+		});
+	});
+
+	// Use application-level middleware for common functionality, including
+	// logging, parsing, and session handling.
+	//app.use(require('morgan')('combined'));
+	app.use(require('cookie-parser')());
+	app.use(require('body-parser').urlencoded({
+		extended: true
+	}));
+	app.use(require('express-session')({
+		secret: 't0psecret',
+		resave: false,
+		saveUninitialized: false
+	}));
+
+	// Initialize Passport and restore authentication state, if any, from the
+	// session.
+	app.use(passport.initialize());
+	app.use(passport.session());
+
+	var resultUrl = apiUrl + 'auth/result';
+
+	app.post(apiUrl + 'auth/in',
+		passport.authenticate('local', {
+			successRedirect: resultUrl,
+			failureRedirect: resultUrl
 		})
-	}*/
+	);
+
+	app.post(apiUrl + 'auth/out', function (req, res) {
+			req.logout();
+			res.redirect(resultUrl);
+		}
+	);
+
+	app.get(apiUrl + 'auth/result', function (req, res) {
+		if (req.user) {
+			req.user.pwd = 'LOL';
+		}
+		res.json({
+			user: req.user
+		});
+	});
+}
+
+function setupApi(app) {
 
 	app.get(apiUrl + 'commondata', function (req, res) {
-		dbtools.getDb().collection(C_USERS).aggregate([{
-			$sample: {
-				size: 1
-			}
-		}]).toArray(function (err, docs) {
-			if (err) {
-				handleError(res, err, "Failed to get user.");
-			}
-			else {
-				var result = {
-					currentUser: docs[0]
-				}
-				res.status(200).json(result);
-			}
+		res.status(200).json({
+			currentUser: req.user
 		});
 	});
 
@@ -96,7 +138,7 @@ function doSetup(app) {
 									Темы
 		-------------------------------------------------------------------
 	*/
-	/*  
+	/*	
 		GET получить все
 		POST создать новый
 	*/
@@ -141,7 +183,7 @@ function doSetup(app) {
 	});
 
 	app.post(apiUrl + 'themes', function (req, res) {
-		var author_id = ObjectID(req.body._TEMP_UID4DEL); // TODO определять на сервере конечно
+		var author_id = ObjectID(req.user._id);
 		var newTheme;
 
 		// Creating first reply
@@ -211,7 +253,7 @@ function doSetup(app) {
 							Ответы (сообщения тем)
 		-------------------------------------------------------------------
 	*/
-	/*  
+	/*	
 		GET получить все
 		POST создать новый
 	*/
@@ -242,7 +284,7 @@ function doSetup(app) {
 	});
 
 	app.post(apiUrl + 'replies', function (req, res) {
-		var author_id = ObjectID(req.body._TEMP_UID4DEL); // TODO определять на сервере конечно
+		var author_id = ObjectID(req.user._id);
 		delete req.body._TEMP_UID4DEL;
 
 
@@ -271,7 +313,7 @@ function doSetup(app) {
 	});
 
 	app.post(apiUrl + 'vote', function (req, res) {
-		req.body.author_id = ObjectID(req.body.author_id); // TODO определять на сервере конечно
+		req.body.author_id = ObjectID(req.user._id);
 		req.body.reply_id = ObjectID(req.body.reply_id);
 		req.body.date = new Date();
 		req.body.value = req.body.value | 0;
@@ -288,6 +330,13 @@ function doSetup(app) {
 		var rating_total = 0;
 		var reply_rating = 0;
 		var reply_author_id;
+
+		// next() callback is using without transferring args down the waterfall
+		// instead of it, vars (i.e. reply_rating) is function-wide 
+		// and args is using for error handling
+		// arguments of next:
+		// 	1. db err object OR boolean (empty response). Both of them are works as an error flag
+		//	2. human-readable error text
 		waterfall([
 				// 1. Create|Update vote document
 				function (next) {
@@ -298,27 +347,24 @@ function doSetup(app) {
 						}, newVote, {
 							upsert: true // insert if not exists, updates if exist
 						}, function (err, doc, upserted) {
-							next(err || !doc);
+							next(err || !doc, 'Failed to ' + (upserted ? 'create' : 'update') + ' vote');
 						});
 				},
 				// 2. Find all votes for current reply and recalculate its rating
 				function (next) {
 					// sure it could be done incremental way
 					// but lets check first if full recalculation is fast enough
+					// because of lack of multi transaction rollback in mongo
 					db.collection(C_VOTES)
 						.find({
 							reply_id: newVote.reply_id
 						})
 						.toArray(function (err, votes) {
-							if (err || !votes) {
-								handleError(res, err, 'Failed to find all votes for current reply');
+							votes = votes || [];
+							for (let i = 0; i < votes.length; i++) {
+								reply_rating += votes[i].value | 0;
 							}
-							else {
-								for (let i = 0; i < votes.length; i++) {
-									reply_rating += votes[i].value | 0;
-								}
-								next();
-							}
+							next(err || votes.length, 'Failed to find all votes for current reply');
 						});
 				},
 				// 3. Update rating of a current reply
@@ -331,12 +377,7 @@ function doSetup(app) {
 								rating: reply_rating
 							}
 						}, function (err, doc) {
-							if (err || !doc) {
-								handleError(res, err, 'Failed to update rating of voted reply');
-							}
-							else {
-								next();
-							}
+							next(err || !doc, 'Failed to update rating of voted reply');
 						});
 				},
 				// 4. Find author of voted reply
@@ -345,13 +386,8 @@ function doSetup(app) {
 						.findOne({
 							_id: newVote.reply_id
 						}, function (err, doc) {
-							if (err || !doc) {
-								handleError(res, err, 'Failed to find author of voted reply');
-							}
-							else {
-								reply_author_id = ObjectID(doc.author_id);
-								next()
-							}
+							reply_author_id = ObjectID(doc.author_id);
+							next(err || !doc, 'Failed to find author of voted reply')
 						});
 				},
 				// 5. Find all replies of author of voted reply and recalculate his rating
@@ -361,21 +397,18 @@ function doSetup(app) {
 							author_id: reply_author_id
 						})
 						.toArray(function (err, docs) {
-							if (err || !docs) {
-								handleError(res, err, 'Failed to find all replies of author of voted reply');
+							docs = docs || [];
+							for (let i = 0; i < docs.length; i++) {
+								rating_total += docs[i].rating | 0;
 							}
-							else {
-								for (let i = 0; i < docs.length; i++) {
-									rating_total += docs[i].rating | 0;
-								}
-								next()
-							}
+							next(err || docs.length, 'Failed to find all replies of author of voted reply')
 						});
 				},
 				// 6. Update rating of author of voted reply
 				function (next) {
 					// sure it could be done incremental way
 					// but lets check first if full recalculation is fast enough
+					// because of lack of multi transaction rollback in mongo
 					db.collection(C_USERS)
 						.update({
 							_id: reply_author_id
@@ -384,20 +417,14 @@ function doSetup(app) {
 								rating_total: rating_total
 							}
 						}, function (err, doc) {
-							if (err || !doc) {
-								handleError(res, err, 'Failed to update rating_total of author of voted reply');
-							}
-							else {
-								next(null)
-							}
+							next(err || !doc, 'Failed to update rating_total of author of voted reply');
 						});
 				}
 			],
 			// 
-			function (err, data) { // can be more args
+			function (err, humanErr) {
 				if (err) {
-					console.log('Error! Reason ' + err, arguments)
-					handleError(res, err, 'Failed to ' + (upserted ? 'create' : 'update') + ' vote');
+					handleError(res, err, humanErr);
 				}
 				else {
 					res.status(201).json({
@@ -409,7 +436,7 @@ function doSetup(app) {
 
 	});
 
-	/*  
+	/*	
 		GET		find contact by id
 		PUT		update contact by id
 		DELETE	deletes contact by id
@@ -450,7 +477,7 @@ function doSetup(app) {
 		-------------------------------------------------------------------
 	*/
 
-	/*  
+	/*	
 		GET		получить все
 		POST	создать новый
 	*/
@@ -533,3 +560,21 @@ function handleError(res, errObjOrStr, message, code) {
 		"error": message
 	});
 }
+
+// app.use(require('compression')) 
+// with default settings it decreases page size (232 vs 767 KB)
+// but increases CPU load and therefore page speed
+// i preferred build-time compression, see _main-server.js
+// compression invocation is not here because its not needed for webpack dev server
+
+// Handling a case when app is built for Cordova, therefore api becomes remote
+// Im not sure that Access-Control-Allow-Origin:* is OK for production
+// see also api-url.js
+/*var isHeroku = !!process.env.PORT
+if (isHeroku) {
+	app.use(function (req, res, next) {
+		res.header("Access-Control-Allow-Origin", "*");
+		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		next();
+	})
+}*/

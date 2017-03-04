@@ -28,7 +28,7 @@ request
 				mounted: function () {},
 				methods: {},
 				data: {
-					currentUser: res.body.currentUser
+					currentUser: res.body.currentUser ? res.body.currentUser : false
 				}
 			})
 		}

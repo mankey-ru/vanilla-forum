@@ -29,7 +29,7 @@ export default {
 	},
 	filters: {
 		dateTimeFormat: function (val) {
-			return moment('1970-01-01T00:00:00.000Z').format('MM.DD.YYYY h:mm:ss');;
+			return moment(val).format('MM.DD.YYYY hh:mm');;
 		}
 	}
 }

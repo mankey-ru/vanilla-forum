@@ -12,6 +12,10 @@ body {
 	padding-top: 2em;
 }
 
+.nwr {
+	white-space: nowrap;
+}
+
 .link-dotted{
 	cursor: pointer;
 	border-bottom: 1px dotted;
@@ -51,7 +55,7 @@ body {
 	font-size: 3em;
 }
 .spin-sm:after {
-	font-size: 2em;
+	font-size: 1.8em;
 }
 .spin-input {
 	float: right;
