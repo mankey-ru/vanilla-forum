@@ -28,18 +28,15 @@ module.exports = function (app) {
 function setupAuth(app) {
 	// Local auth
 	// http://passportjs.org/docs/username-password
-
-
-
 	passport.use(new LocalStrategy(
-		function (email, pwd, done) {
+		function (email, password, done) {
 			dbtools.getDb().collection(C_USERS).findOne({
 				email: email
 			}, function (err, user) {
 				if (err) {
 					return done(err);
 				}
-				if (!user || !validPassword(user, pwd)) {
+				if (!user || !bcrypt.compareSync(password, user.pwd)) {
 					return done(null, false, {
 						message: 'XXXX'
 					});
@@ -48,10 +45,6 @@ function setupAuth(app) {
 			});
 		}
 	));
-
-	function validPassword(user, pwd) {
-		return pwd === user.pwd;
-	}
 
 	// Configure Passport authenticated session persistence.
 	passport.serializeUser(function (user, cb) {
@@ -97,19 +90,99 @@ function setupAuth(app) {
 	);
 
 	app.post(apiUrl + 'auth/out', function (req, res) {
-			req.logout();
-			res.redirect(resultUrl);
-		}
-	);
+		req.logout();
+		res.redirect(resultUrl);
+	});
 
 	app.get(apiUrl + 'auth/result', function (req, res) {
 		if (req.user) {
-			req.user.pwd = 'LOL';
+			req.user.pwd = '<NO>';
 		}
 		res.json({
 			user: req.user
 		});
 	});
+
+
+	/**
+		Reqistration
+	*/
+	const bcrypt = require('bcrypt');
+	const saltRounds = 8;
+
+	app.post(apiUrl + 'auth/reg', function (req, res) {
+		if (req.user) {
+			// user already authed
+			req.logout();
+		}
+		// checking request data
+		var reqd = ['email', 'password'];
+		for (let k of reqd) {
+			if (typeof req.body[k] === 'undefined') {
+				handleError(res, err, 'Not enough data (' + k + ')');
+				return;
+			}
+		}
+
+		var newUser = _.pick(req.body, ['email', 'name']);
+		newUser.date = new Date;
+		newUser.online = true;
+		newUser.rating_total = 0;
+		newUser.pic = 'userpics/2.png';
+
+		var db = dbtools.getDb();
+
+		waterfall([
+			// check if email is unique
+			// TODO create unique constraint on email
+			// https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/
+			function (next) {
+				db.collection(C_USERS).find({
+					email: req.body.email
+				}).toArray(function (err, docs) {
+					//console.log(err || docs.length !== 0)
+					var fail = err || docs.length !== 0;
+					next(err || docs.length !== 0 ? 'User with speciafied email already exists' : null)
+				})
+			},
+			// Generating pwd hash
+			function (next) { // TODOOOOO
+				//console.log('bcrypt.hash', arguments)
+				bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+					newUser.pwd = hash;
+					next();
+				});
+			},
+			// Inserting user
+			function (next) {
+				db.collection(C_USERS)
+					.insertOne(newUser, function (err, insert) {
+						newUser = insert.ops[0];
+						next(err || !insert.result.ok ? 'Failed to create new user' : null);
+					});
+			}
+		], waterfallFinal)
+
+		function waterfallFinal(err) {
+			if (err) {
+				handleError(res, err, err);
+			}
+			else {
+				req.login(newUser, function (err) {
+					if (err) { 
+						// potential error from the login() callback would come from your serializeUser() function
+						handleError(res, 'Automatic login of new user failed');
+					}
+					else {
+						newUser.pwd = '<NO>';
+						res.status(201).json(newUser).end();						
+					}
+				})
+			}
+		}
+	});
+
+
 }
 
 function setupApi(app) {
@@ -117,7 +190,7 @@ function setupApi(app) {
 	app.get(apiUrl + 'commondata', function (req, res) {
 		res.status(200).json({
 			currentUser: req.user
-		});
+		}).end();
 	});
 
 	app.get(apiUrl + 'user/:user_id', function (req, res) {
@@ -129,7 +202,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get user.");
 			}
 			else {
-				res.status(200).json(doc);
+				res.status(200).json(doc).end();
 			}
 		});
 	});
@@ -177,7 +250,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get themes.");
 			}
 			else {
-				res.status(200).json(docs);
+				res.status(200).json(docs).end();
 			}
 		});
 	});
@@ -194,15 +267,16 @@ function setupApi(app) {
 			theme_id: null, // to be updated
 			date: new Date()
 		}
-		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
-			if (err) {
-				handleError(res, err, 'Failed to create first reply');
-			}
-			else {
-				newReply._id = ObjectID(doc.ops[0]._id);
-				createNewTheme() // TODO promise
-			}
-		});
+		dbtools.getDb().collection(C_REPLIES)
+			.insertOne(newReply, function (err, insert) {
+				if (err || !insert.result.ok) {
+					handleError(res, err, 'Failed to create first reply');
+				}
+				else {
+					newReply._id = ObjectID(insert.ops[0]._id);
+					createNewTheme() // TODO promise
+				}
+			});
 
 		function createNewTheme() {
 			newTheme = req.body;
@@ -221,15 +295,16 @@ function setupApi(app) {
 				}
 			}
 
-			dbtools.getDb().collection(C_THEMES).insertOne(newTheme, function (err, doc) {
-				if (err) {
-					handleError(res, err, 'Failed to create new theme');
-				}
-				else {
-					newReply.theme_id = ObjectID(doc.ops[0]._id);
-					updateFirstReply() // TODO promise
-				}
-			});
+			dbtools.getDb().collection(C_THEMES)
+				.insertOne(newTheme, function (err, insert) {
+					if (err || !insert.result.ok) {
+						handleError(res, err, 'Failed to create new theme');
+					}
+					else {
+						newReply.theme_id = ObjectID(insert.ops[0]._id);
+						updateFirstReply() // TODO promise
+					}
+				});
 		}
 
 		function updateFirstReply() {
@@ -278,7 +353,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get themes.");
 			}
 			else {
-				res.status(200).json(docs);
+				res.status(200).json(docs).end();
 			}
 		});
 	});
@@ -302,14 +377,15 @@ function setupApi(app) {
 		newReply.theme_id = ObjectID(newReply.theme_id);
 		newReply.author_id = author_id;
 
-		dbtools.getDb().collection(C_REPLIES).insertOne(newReply, function (err, doc) {
-			if (err) {
-				handleError(res, err, 'Failed to create reply');
-			}
-			else {
-				res.status(201).json(doc.ops[0]).end();
-			}
-		});
+		dbtools.getDb().collection(C_REPLIES)
+			.insertOne(newReply, function (err, insert) {
+				if (err) {
+					handleError(res, err, 'Failed to create reply');
+				}
+				else {
+					res.status(201).json(insert.ops[0]).end();
+				}
+			});
 	});
 
 	app.post(apiUrl + 'vote', function (req, res) {
@@ -450,7 +526,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get contact");
 			}
 			else {
-				res.status(200).json(doc);
+				res.status(200).json(doc).end();
 			}
 		});
 	});
@@ -516,7 +592,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get forums.");
 			}
 			else {
-				res.status(200).json(docs);
+				res.status(200).json(docs).end();
 			}
 		});
 	});
@@ -542,7 +618,7 @@ function setupApi(app) {
 				handleError(res, err, "Failed to get users.");
 			}
 			else {
-				res.status(200).json(docs);
+				res.status(200).json(docs).end();
 			}
 		});
 	});
@@ -555,10 +631,10 @@ function setupApi(app) {
 
 function handleError(res, errObjOrStr, message, code) {
 	var reason = !!errObjOrStr && errObjOrStr.message ? errObjOrStr.message : errObjOrStr;
-	console.log('API ERROR: ' + reason, message);
+	console.log('API ERROR: ' + reason);
 	res.status(code || 500).json({
 		"error": message
-	});
+	}).end();
 }
 
 // app.use(require('compression')) 

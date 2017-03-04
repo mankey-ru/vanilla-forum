@@ -3,6 +3,7 @@ import forum_list from './vue-components/theme_list.vue'; // под замену
 import theme_list from './vue-components/theme_list.vue'; // под замену
 import reply_list from './vue-components/reply_list.vue';
 import user_profile from './vue-components/user-profile.vue';
+import user_register from './vue-components/user-register.vue';
 
 
 export default [
@@ -15,6 +16,10 @@ export default [
 		name: 'user-profile-any',
 		path: '/user-profile/:user_id',
 		component: user_profile
+	},{
+		name: 'user-register',
+		path: '/register',
+		component: user_register
 	},
 	// 1. Список групп форумов
 	{

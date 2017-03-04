@@ -15,11 +15,25 @@
 					<tbody>
 						<tr>
 							<td>О себе</td>
-							<td>{{user.about}}</td>
+							<td>
+								<div v-if="own">
+									<input v-model="user.about" class="form-control"/>
+								</div>
+								<div v-if="!own">
+									{{user.about}}
+								</div>
+							</td>
 						</tr>
 						<tr>
 							<td>Дата рождения</td>
-							<td>{{user.bdate}}</td>
+							<td>
+								<div v-if="own">
+									<input v-model="user.bdate" class="form-control"/>
+								</div>
+								<div v-if="!own">
+									{{user.bdate}}
+								</div>
+							</td>
 						</tr>
 						<tr>
 							<td>Суммарный рейтинг комментариев пользователя</td>
@@ -40,7 +54,8 @@
 		name: 'user-profile',
 		data: function () {
 			return {
-				user: false
+				user: false,
+				own: false
 			}
 		},
 		methods: {
@@ -50,22 +65,28 @@
 					$.getJSON(apiUrl + 'user/' + user_id, {}) 
 					.done((data)=>{
 						if (data instanceof Object) {
-							this.user = data
+							this.user = data;
+							this.own = this.currentUser._id === data._id;
 						}
 					})
 					.fail(()=>{
-						console.warn('Рандомная (10%) неудача получения. Ждём секунду и пробуем ещё раз.');
-						setTimeout(this.getUser, 1000);
+						console.warn('Неудача. Ждём секунду и пробуем ещё раз.');
 					})
 					.always(()=>{})
 				}
 				else {
-					this.user = this.$root.$data.currentUser;
+					this.user = this.currentUser;
+					this.own = true;
 				}
 			}
 		},
 		mounted: function(){
 			this.getUser();
+		},
+		computed: {
+			currentUser: function(){
+				return this.$root.$data.currentUser
+			}
 		},
 		watch: {
 		    '$route': 'getUser' // чтобы при смене /#/user-profile/1 на /#/user-profile обовлялся пользователь

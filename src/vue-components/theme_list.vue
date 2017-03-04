@@ -131,7 +131,7 @@
 					});
 			}
 		},
-		mixins: [mixins],
+		mixins: [mixins], 
 		computed: {
 			newTheme_readyToCreate: function(){
 				return this.newTheme_loading || !this.newTheme.name || !this.newTheme._TEMP_firstReply

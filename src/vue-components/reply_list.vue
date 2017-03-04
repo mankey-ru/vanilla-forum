@@ -62,23 +62,29 @@
 					text: bbcodeVal
 				}
 				request
-				.post(apiUrl + 'replies')
-				.send(newMsgSrv)
-				.end((err, res)=>{
-					if (err || !res.body) {
-						notie.alert('error', 'Creating reply failed', 3);
-							this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
-						}
-						else {
-							notie.alert('success', 'Reply created', 3);
-							newMsg.pending_add = false;
-							// Actualizing some props to server values TODO
-							newMsg.date = res.body.date;
-							newMsg._id	= res.body._id;
-							editorInstance.val('');
-						}
-						editorInstance.readOnly(false);
-					});
+					.post(apiUrl + 'replies')
+					.send(newMsgSrv)
+					.end((err, res)=>{
+							if (err || !res.body) {
+								notie.alert({
+									type:'error', 
+									text: res.body.error || 'Creating reply failed'
+								});
+								this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
+							}
+							else {
+								notie.alert({
+									type:'success', 
+									text:'Reply created'
+								});
+								newMsg.pending_add = false;
+								// Actualizing some props to server values TODO
+								newMsg.date = res.body.date;
+								newMsg._id	= res.body._id;
+								editorInstance.val('');
+							}
+							editorInstance.readOnly(false);
+						});
 			},
 			msg_vote: function(msg, val){
 				if (val===msg.voted) {
@@ -100,13 +106,19 @@
 				})
 				.end((err, res)=>{
 					if (err || !res.body) {							
-						notie.alert('error', 'Vote failed', 3);
+						notie.alert({
+							type:'error', 
+							text: res.body.error || 'Vote failed'
+						});
 						msg.rating = ratingBackup;
 						msg.voted = votedBackup;
 						msg.author.rating_total = ratingTotalBackup;
 					}
 					else {
-						notie.alert('success', 'Vote success', 3);
+							notie.alert({
+								type:'success', 
+								text:'Vote success'
+							});
 							// actualizing some props to server values
 							// if values is returning to prev then probably current user already voted
 							// TODO update all replies with this author

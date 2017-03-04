@@ -3,11 +3,25 @@ const moment = require('moment');
 export default {
 	methods: {
 		gotoProfile: function (author) {
-			this.$router.push({
-				name: 'user-profile-any',
-				params: {
-					user_id: author._id
+			var rt;
+			if (author) {
+				rt = {
+					name: 'user-profile-any',
+					params: {
+						user_id: author._id
+					}
 				}
+			}
+			else {
+				rt = {
+					name: 'user-profile-current'
+				}
+			}
+			this.$router.push(rt)
+		},
+		gotoRegister: function () {
+			this.$router.push({
+				name: 'user-register'
 			})
 		},
 		gotoForum: function (forum) {

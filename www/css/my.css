@@ -11,6 +11,9 @@ body {
 	padding-bottom: 8em;
 	padding-top: 2em;
 }
+.opa {
+	opacity: .5;
+}
 
 .nwr {
 	white-space: nowrap;

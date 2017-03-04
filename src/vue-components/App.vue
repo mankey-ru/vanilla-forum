@@ -1,5 +1,6 @@
 <script>
 	const apiUrl = require('./../api-url.js');
+	import mixins from './../vue-mixins.js';
 	import routes from './../vue-routes.js';
 	import request from 'superagent';
 	import notie from 'notie';
@@ -13,13 +14,11 @@
 					email: '',
 					password: '',
 					pending: false
-				}
+				},
+				signOut_pending: false
 			}
 		},
 		methods: {
-			goto_profile: function(){
-				this.$router.push('/user-profile')
-			},
 			signIn_submit: function(){
 				if (!this.signIn_valid) {
 					return
@@ -64,6 +63,7 @@
 				});
 			}
 		},
+		mixins: [mixins],
 		computed: {
 			signIn_valid: function(){
 				return this.signIn.email && this.signIn.password
@@ -82,14 +82,14 @@
 			<router-link v-bind:to="rt.path" v-html="rt._title" v-for="rt in routes" v-if="!rt._hidden" class="btn btn-default" v-bind:disabled="rt._disabled" active-class="active"></router-link>
 		</div> -->
 		<div class="row">
-			<div class="col-xs-8">
+			<div class="col-xs-6">
 				<span v-on:click="$router.push('/')" style="font-size: 3em;cursor: pointer;">
 					<i class="glyphicon glyphicon-equalizer"></i> LOGO
 				</span>
 			</div>
-			<div class="col-xs-16">
+			<div class="col-xs-18">
 				<div v-if="currentUser" class="text-right">
-					<button v-on:click="goto_profile" class="btn btn-default">
+					<button v-on:click="gotoProfile" class="btn btn-default">
 						<i class="glyphicon glyphicon-user"></i> {{currentUser.name}}
 					</button>
 					<button v-on:click="signOut" class="btn btn-default">
@@ -101,7 +101,7 @@
 				<div v-if="!currentUser">
 					<form v-on:submit.prevent="signIn_submit">
 						<div class="row">
-							<div class="col-xs-6 col-xs-offset-7">
+							<div class="col-xs-6 col-xs-offset-4">
 								<label>Email</label>
 								<input name="email" type="email" class="form-control" v-model="signIn.email"/>
 							</div>
@@ -109,12 +109,18 @@
 								<label>Password</label>
 								<input name="password" class="form-control" v-model="signIn.password" type="password"/>
 							</div>
-							<div class="col-xs-5 text-right">
+							<div class="col-xs-4">
 								<div><label>&#160;</label></div>
 								<button class="btn btn-primary" v-bind:disabled="!signIn_valid || signIn.pending" type="submit">
 									<i v-show="signIn.pending" class="spin"></i> 
 									<i v-show="!signIn.pending" class="glyphicon glyphicon-log-in"></i> 
 									Log in
+								</button>
+							</div>
+							<div class="col-xs-4 text-right">
+								<div><label>&#160;</label></div>
+								<button class="btn btn-primary" v-on:click.prevent="gotoRegister" v-bind:disabled="signIn.pending" type="button">
+									Register
 								</button>
 							</div>
 						</div>
