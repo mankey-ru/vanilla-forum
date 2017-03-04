@@ -4,7 +4,7 @@ export default {
 	methods: {
 		gotoProfile: function (author) {
 			var rt;
-			if (author) {
+			if (author && author._id) {
 				rt = {
 					name: 'user-profile-any',
 					params: {
@@ -17,6 +17,7 @@ export default {
 					name: 'user-profile-current'
 				}
 			}
+			console.log(rt)
 			this.$router.push(rt)
 		},
 		gotoRegister: function () {
