@@ -75,6 +75,7 @@
 		text-decoration: none;
 	}
 	.pager-link-current {
+		color: #000;
 		font-weight: bold;
 		cursor: default;
 		font-size: 1.4em;

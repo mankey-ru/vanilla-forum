@@ -372,7 +372,11 @@ function setupApi(app) {
 			}
 		}, {
 			$unwind: '$author'
-		}, { 
+		}, {
+			$sort: {
+				'date': 1
+			}
+		}, {
 			$skip: skipSize // yup, Shlemiel The Painter
 		}, {
 			$limit: pageSize
@@ -398,7 +402,7 @@ function setupApi(app) {
 							}
 							res.status(200).json(data).end();
 						});
-					
+
 				}
 			});
 	}
