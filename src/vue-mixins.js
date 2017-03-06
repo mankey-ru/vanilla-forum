@@ -44,7 +44,7 @@ export default {
 	},
 	filters: {
 		dateTimeFormat: function (val) {
-			var date = new Date();
+			var date = new Date(val);
 			if (date.toLocaleString) {
 				return date.toLocaleString()
 			}

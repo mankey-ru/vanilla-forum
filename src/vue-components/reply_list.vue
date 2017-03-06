@@ -44,6 +44,7 @@
 						this.theme = res.body.theme;
 						var replies = res.body.replies;
 						if (replies instanceof Array) {
+							this.msgList.splice(0);
 							for (let msg of replies) {
 									msg.text = editorInstance.fromBBCode(msg.text); // server-side?
 									this.msgList.push(getMsg(msg));
