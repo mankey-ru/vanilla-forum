@@ -1,5 +1,5 @@
 <template>
-	<div class="row pager-wrap"  v-if="current">
+	<div class="row pager-wrap"  v-if="current && last>1">
 		<div class="col-xs-24 text-center">
 
 			<a class="pager-link" v-on:click="func(1)" v-if="current!==1" v-bind:href="urlbase + 1">
@@ -10,8 +10,8 @@
 				<i class="glyphicon glyphicon-chevron-left pager-link"></i>
 			</a>
 
-			<span style="margin: 0 3em">
-				<a v-for="n in range" v-on:click="func(n)" class="pager-link" v-bind:class="{'pager-link-current': n===current}">
+			<span style="margin: 0 3e">
+				<a v-for="n in range" v-on:click="func(n)" class="pager-link" v-bind:class="{'pager-link-current': n===current}"  v-bind:href="urlbase + n">
 					{{n}}
 				</a>
 			</span>
@@ -49,7 +49,7 @@
 				var range = [];
 				var depth = 3;
 				var min = Math.max(1, this.current - this.depth);
-				var max = this.current + this.depth;
+				var max = Math.min(this.last, this.current + this.depth);
 				for (let i = min; i<=max; i++) {
 					range.push(i)
 				}

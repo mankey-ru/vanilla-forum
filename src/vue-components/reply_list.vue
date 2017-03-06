@@ -274,7 +274,7 @@
 			<i class="spin spin-lg"></i>
 		</div>
 		<div v-show="!msgList_loading">
-			<pager v-bind:current="pager.current" v-bind:func="msg_fetch"></pager>
+			<pager v-bind:current="pager.current" v-bind:func="msg_fetch" v-bind:last="pager.last"></pager>
 			<div v-for="msg in msgList" v-bind:id="'reply-id-'+msg._id">
 				<div class="row" v-if="msg.rating < msg_rating_threshold  && !msg.unhide">
 					<div class="col-sm-24">
