@@ -169,13 +169,13 @@ function setupAuth(app) {
 			}
 			else {
 				req.login(newUser, function (err) {
-					if (err) { 
+					if (err) {
 						// potential error from the login() callback would come from your serializeUser() function
 						handleError(res, 'Automatic login of new user failed');
 					}
 					else {
 						newUser.pwd = '<NO>';
-						res.status(201).json(newUser).end();						
+						res.status(201).json(newUser).end();
 					}
 				})
 			}
@@ -333,11 +333,36 @@ function setupApi(app) {
 		POST создать новый
 	*/
 
-	app.get(apiUrl + 'replies/:theme_id', function (req, res) {
-		var aRules = [{
-			$match: {
-				theme_id: ObjectID(req.params.theme_id)
+	app.get(apiUrl + 'theme/:theme_id', function (req, res) {
+		dbtools.getDb().collection(C_THEMES).findOne({
+			_id: new ObjectID(req.params.theme_id)
+		}, function (err, doc) {
+			if (err) {
+				handleError(res, err, "Failed to get contact");
 			}
+			else {
+				var data = {
+					theme: doc
+				}
+				getReplies(req, res, data); // request ends inside getReplies
+			}
+		});
+	});
+
+	app.get(apiUrl + 'theme/:theme_id/replies', function (req, res) {
+		getReplies(req, res)
+	});
+
+	function getReplies(req, res, data) {
+		data = data || {};
+		var pageSize = 20;
+		var pageNum = req.query.pageNum | 0 || 1;
+		var skipSize = pageSize * (pageNum - 1);
+		var findCriteria = {
+			theme_id: ObjectID(req.params.theme_id)
+		};
+		var aRules = [{
+			$match: findCriteria
 		}, {
 			$lookup: {
 				from: C_USERS,
@@ -347,16 +372,36 @@ function setupApi(app) {
 			}
 		}, {
 			$unwind: '$author'
+		}, { 
+			$skip: skipSize // yup, Shlemiel The Painter
+		}, {
+			$limit: pageSize
 		}];
-		dbtools.getDb().collection(C_REPLIES).aggregate(aRules).toArray(function (err, docs) {
-			if (err) {
-				handleError(res, err, "Failed to get themes.");
-			}
-			else {
-				res.status(200).json(docs).end();
-			}
-		});
-	});
+
+		dbtools.getDb().collection(C_REPLIES)
+			.aggregate(aRules)
+			.toArray(function (err, docs) {
+				if (err || !docs) {
+					handleError(res, err, 'Failed to get theme replies');
+				}
+				else {
+					data.replies = docs;
+					// mongodb v.3.4 supports $count stage in aggregation
+					// so theres no need to make an additional count request
+					// but now I have only v.3.2, so...
+					dbtools.getDb().collection(C_REPLIES)
+						.count(findCriteria, function (err, count) {
+							data.pager = {
+								total: count,
+								current: pageNum,
+								last: Math.ceil(count / pageSize)
+							}
+							res.status(200).json(data).end();
+						});
+					
+				}
+			});
+	}
 
 	app.post(apiUrl + 'replies', function (req, res) {
 		var author_id = ObjectID(req.user._id);
@@ -376,6 +421,8 @@ function setupApi(app) {
 		newReply.rating = 0;
 		newReply.theme_id = ObjectID(newReply.theme_id);
 		newReply.author_id = author_id;
+
+		// todo upd theme.last_reply_id and theme.last_reply_author_id
 
 		dbtools.getDb().collection(C_REPLIES)
 			.insertOne(newReply, function (err, insert) {
@@ -517,19 +564,6 @@ function setupApi(app) {
 		PUT		update contact by id
 		DELETE	deletes contact by id
 	 */
-
-	app.get(apiUrl + 'themes/:id', function (req, res) {
-		dbtools.getDb().collection(C_THEMES).findOne({
-			_id: new ObjectID(req.params.id)
-		}, function (err, doc) {
-			if (err) {
-				handleError(res, err, "Failed to get contact");
-			}
-			else {
-				res.status(200).json(doc).end();
-			}
-		});
-	});
 
 	app.put(apiUrl + 'themes/:id', function (req, res) {
 		var updateDoc = req.body;

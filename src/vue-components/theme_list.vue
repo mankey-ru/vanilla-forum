@@ -6,11 +6,11 @@
 			<table class="table table-striped">
 				<thead>
 					<tr>
-						<td></td>
-						<td></td>
-						<td class="text-center">Ответы</td>
-						<td class="text-center">Просмотры</td>
-						<td>Последнее сообщение</td>
+						<th></th>
+						<th></th>
+						<th class="text-center">Views</th>
+						<th class="text-center">Replies</th>
+						<th>Last</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -19,16 +19,15 @@
 							<a href="#" v-on:click.prevent="gotoTheme(th)">{{th.name}}</a>
 						</td>
 						<td class="nwr">
-							<span title="Тема прикреплена" class="label label-primary" v-if="th.pinned" style="margin-right:.5em">
+							<span title="Pinned" class="label label-primary" v-if="th.pinned" style="margin-right:.5em">
 								<i class="glyphicon glyphicon-pushpin"></i> 
 							</span>
-							<br v-if="th.pinned && th.premoderation"/>
-							<span title="Тема премодерируется" class="label label-primary" v-if="th.premoderation">
+							<span title="Premoderation" class="label label-primary" v-if="th.premoderation">
 								<i class="glyphicon glyphicon-eye-open"></i>  
 							</span>
 						</td>
-						<td class="text-center">{{th.cnt_replies}}</td>
 						<td class="text-center">{{th.cnt_views}}</td>
+						<td class="text-center">{{th.cnt_replies}}</td>
 						<td class="th-list-lastcol">
 							<div class="nwr">
 							{{th.last_reply.date | dateTimeFormat}}
@@ -41,15 +40,15 @@
 					</tr>
 				</tbody>
 			</table>
-			<br />
-			<br />
-			<div class="row">
+			
+			<div class="row" v-if="currentUser">
+				<h2 class="col-md-24">Create a new theme</h2>
 				<div class="col-md-9">
-					<label>Заголовок</label>
+					<label>Title</label>
 					<input class="form-control" v-model="newTheme.name"/>
 				</div>
 				<div class="col-md-9">
-					<label>Текст</label>
+					<label>Text</label>
 					<input class="form-control" v-model="newTheme._TEMP_firstReply"/>
 				</div>
 				<div class="col-md-1 text-right">
@@ -60,7 +59,7 @@
 				<div class="col-md-5 text-right">
 					<label>&#160;</label>
 					<button class="btn btn-primary btn-block" v-on:click="theme_create" v-bind:disabled="newTheme_readyToCreate">
-						Создать тему
+						Submit
 					</button>
 				</div>
 			</div>
@@ -69,6 +68,7 @@
 </template>
 
 <script>
+	const apiUrl = require('./../api-url.js');
 	import _ from 'lodash';
 	import notie from 'notie';
 	import request from 'superagent';
@@ -77,7 +77,7 @@
 		name: 'theme_list',
 		data: function () {
 			return {
-				title: 'Список тем форума «Обо всём»',
+				title: 'Theme list',
 				themeList: [],
 				themeList_loading: true,
 				newTheme: {
@@ -114,10 +114,10 @@
 				.end((err, res)=>{
 					console.log(err, res)
 					if (err || !res.body) {
-						notie.alert('error', 'Ошибка запроса', 3);
+						notie.alert({type: 'error', text: 'Ошибка запроса'});
 					}
 					else {
-						notie.alert('success', 'Тема создана', 3);
+						notie.alert({type: 'success', text: 'Тема создана'});
 						var newTheme = res.body.newTheme;
 							// Adding same props as aggregate/$lookup does when GETting /api/themes
 							// Actually showing new row is unnecessary, so its just a PoC
@@ -135,6 +135,9 @@
 		computed: {
 			newTheme_readyToCreate: function(){
 				return this.newTheme_loading || !this.newTheme.name || !this.newTheme._TEMP_firstReply
+			},
+			currentUser: function(){
+				return this.$root.currentUser
 			}
 		},
 		mounted: function(){

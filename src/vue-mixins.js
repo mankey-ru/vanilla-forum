@@ -1,4 +1,5 @@
 const moment = require('moment');
+import pager from './vue-components/_pager.vue';
 
 export default {
 	methods: {
@@ -17,7 +18,6 @@ export default {
 					name: 'user-profile-current'
 				}
 			}
-			console.log(rt)
 			this.$router.push(rt)
 		},
 		gotoRegister: function () {
@@ -44,7 +44,14 @@ export default {
 	},
 	filters: {
 		dateTimeFormat: function (val) {
-			return moment(val).format('MM.DD.YYYY hh:mm');;
+			var date = new Date();
+			if (date.toLocaleString) {
+				return date.toLocaleString()
+			}
+			return moment(date).format('MM.DD.YYYY hh:mm');
 		}
+	},
+	components: {
+		pager: pager
 	}
 }

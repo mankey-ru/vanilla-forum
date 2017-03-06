@@ -81,13 +81,13 @@
 		<!-- <div class="f-navbar">
 			<router-link v-bind:to="rt.path" v-html="rt._title" v-for="rt in routes" v-if="!rt._hidden" class="btn btn-default" v-bind:disabled="rt._disabled" active-class="active"></router-link>
 		</div> -->
-		<div class="row">
-			<div class="col-xs-6">
+		<div class="row header">
+			<div class="col-xs-7">
 				<span v-on:click="$router.push('/')" style="font-size: 3em;cursor: pointer;">
-					<i class="glyphicon glyphicon-equalizer"></i> LOGO
+					<i class="glyphicon glyphicon-equalizer"></i>&#160;LOGO
 				</span>
 			</div>
-			<div class="col-xs-18">
+			<div class="col-xs-17">
 				<div v-if="currentUser" class="text-right">
 					<button v-on:click="gotoProfile" class="btn btn-default">
 						<i class="glyphicon glyphicon-user"></i> {{currentUser.name}}
@@ -135,11 +135,6 @@
 
 
 <style>
-	.f-navbar {
-		padding-top: 1em;
-	}
-	.f-navbar .btn {
-		margin-right: 1em;
-	}
+	.header {margin-bottom: 2em;}
 </style>
 

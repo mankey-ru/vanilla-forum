@@ -15,33 +15,44 @@
 		name: 'reply_list',
 		data: function () {
 			return {
-				msg_rating_threshold: 0,
-				title: 'Название темы форума',
+				theme: {},
 				msgList: [],
-				msgList_loading: true
+				msgList_loading: true,
+				msg_rating_threshold: 0,
+				pager: {},
+				DEBUG_MSGADD_TEXT: ''
 			}
 		},
 		methods: {
 			msg_unhide: function(msg) {
 				msg.unhide = true;
 			},
-			msg_fetch: function() {
+			msg_fetch: function(pageNum) {
 				this.msgList_loading = true;
-				$.getJSON(apiUrl + 'replies/' + this.$route.params.theme_id)
-				.done((data)=>{
-					this.msgList_loading = false;
-					if (data instanceof Array) {
-						for (let msg of data) {
-							msg.text = editorInstance.fromBBCode(msg.text); // server-side?
-							this.msgList.push(getMsg(msg));
-						}
+				var theme_id = this.$route.params.theme_id;
+				pageNum = pageNum || 1;
+				request
+				.get(apiUrl + `theme/${theme_id}?pageNum=${pageNum}`)
+				.end((err, res)=>{
+					if (err || !res.body || !res.body.theme) {
+						notie.alert({
+							type: 'error', 
+							text: 'Request error'
+						});
 					}
-				})
-				.fail(()=>{
-					console.warn('Request error. Will retry after 2 sec.');
-					setTimeout(this.msg_fetch, 2000);
-				})
-				.always(()=>{})
+					else {
+						this.theme = res.body.theme;
+						var replies = res.body.replies;
+						if (replies instanceof Array) {
+							for (let msg of replies) {
+									msg.text = editorInstance.fromBBCode(msg.text); // server-side?
+									this.msgList.push(getMsg(msg));
+								}
+							}
+						}
+						this.msgList_loading = false;
+						this.pager = res.body.pager;
+					});
 			},
 			msg_add: function () {
 				var bbcodeVal = editorInstance.val();
@@ -49,7 +60,6 @@
 					return
 				}
 				editorInstance.readOnly(true);
-
 				// Show reply immediately without waiting for server response
 				var newMsg = getMsg({ 
 					author: this.currentUser,
@@ -62,29 +72,47 @@
 					text: bbcodeVal
 				}
 				request
-					.post(apiUrl + 'replies')
-					.send(newMsgSrv)
-					.end((err, res)=>{
-							if (err || !res.body) {
-								notie.alert({
-									type:'error', 
-									text: res.body.error || 'Creating reply failed'
-								});
-								this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
-							}
-							else {
-								notie.alert({
-									type:'success', 
-									text:'Reply created'
-								});
-								newMsg.pending_add = false;
-								// Actualizing some props to server values TODO
-								newMsg.date = res.body.date;
-								newMsg._id	= res.body._id;
-								editorInstance.val('');
-							}
-							editorInstance.readOnly(false);
+				.post(apiUrl + 'replies')
+				.send(newMsgSrv)
+				.end((err, res)=>{
+					if (err || !res.body) {
+						notie.alert({
+							type:'error', 
+							text: res.body.error || 'Creating reply failed'
 						});
+						this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
+					}
+					else {
+						notie.alert({
+							type:'success', 
+							text:'Reply created'
+						});
+						newMsg.pending_add = false;
+						// Actualizing some props to server values TODO
+						newMsg.date = res.body.date;
+						newMsg._id	= res.body._id;
+						editorInstance.val('');
+					}
+					editorInstance.readOnly(false);
+				});
+			},
+			DEBUG_MSGADD: function(){
+				if (!this.DEBUG_MSGADD_TEXT) {return}
+					var strArr = this.DEBUG_MSGADD_TEXT.split('\n');
+				if (strArr.length===0) {return}
+					var i = 0;
+				var interval = setInterval(()=>{
+					i++;
+					if (i===strArr.length) {
+						clearInterval(interval);
+						console.log('BATCH MESSAGE ADDING FINISHED')
+					}
+					else {
+						console.log(`Sent ${strArr[i]} (i===${i})`)
+						editorInstance.val(strArr[i]);
+						this.msg_add();
+					}
+				}, 2000)
 			},
 			msg_vote: function(msg, val){
 				if (val===msg.voted) {
@@ -115,10 +143,10 @@
 						msg.author.rating_total = ratingTotalBackup;
 					}
 					else {
-							notie.alert({
-								type:'success', 
-								text:'Vote success'
-							});
+						notie.alert({
+							type:'success', 
+							text:'Vote success'
+						});
 							// actualizing some props to server values
 							// if values is returning to prev then probably current user already voted
 							// TODO update all replies with this author
@@ -167,7 +195,7 @@
 					this.msg_add();
 				}
 			})
-			this.msg_fetch();
+			this.msg_fetch(this.$route.query.pageNum);
 		},
 		destroyed: function () {
 			editorInstance.destroy()
@@ -195,6 +223,9 @@
 		computed: {
 			currentUser: function(){
 				return this.$root.$data.currentUser
+			},
+			DEBUG: function(){
+				return 'dbg' in this.$route.query
 			}
 		}
 	}
@@ -228,13 +259,22 @@
 
 <template>
 	<div>
-		<h2>{{title}}</h2>
-		<br/>
+		<h2>
+			{{theme.name}}
+		</h2>
+		<div>
+			<span class="label label-primary" v-if="theme.pinned" style="margin-right:.5em">
+				<i class="glyphicon glyphicon-pushpin"></i> Pinned
+			</span>
+			<span class="label label-primary" v-if="theme.premoderation">
+				<i class="glyphicon glyphicon-eye-open"></i> Premoderation
+			</span>
+		</div>
 		<div v-show="msgList_loading" class="text-center">
 			<i class="spin spin-lg"></i>
 		</div>
 		<div v-show="!msgList_loading">
-
+			<pager v-bind:current="pager.current" v-bind:func="msg_fetch"></pager>
 			<div v-for="msg in msgList" v-bind:id="'reply-id-'+msg._id">
 				<div class="row" v-if="msg.rating < msg_rating_threshold  && !msg.unhide">
 					<div class="col-sm-24">
@@ -313,6 +353,8 @@
 					</div>
 				</div>
 			</div>
+			<pager v-bind:current="pager.current" v-bind:func="msg_fetch" v-bind:last="pager.last"></pager>
+
 			<div v-if="currentUser">
 				<div class="row">
 					<div class="col-sm-24">
@@ -320,6 +362,16 @@
 						Отвечает <b>{{currentUser.name}}</b>
 						<br/>
 					</div>
+				</div>
+			</div>
+			<div v-if="DEBUG" style="margin: 4em 0;">
+				<div class="form-group">
+					<textarea v-model="DEBUG_MSGADD_TEXT" class="form-control" style="height:400px"></textarea>
+				</div>
+				<div class="text-right">
+					<button v-on:click="DEBUG_MSGADD" class="btn btn-danger">
+						Send batch
+					</button>
 				</div>
 			</div>
 			<div v-else="">
