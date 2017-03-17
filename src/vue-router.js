@@ -1,3 +1,6 @@
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+
 import forum_group_list from './vue-components/theme_list.vue'; // под замену
 import forum_list from './vue-components/theme_list.vue'; // под замену
 import theme_list from './vue-components/theme_list.vue'; // под замену
@@ -6,7 +9,8 @@ import user_profile from './vue-components/user-profile.vue';
 import user_register from './vue-components/user-register.vue';
 
 
-export default [
+
+var routes = [
 	// Профайлы
 	{
 		name: 'user-profile-current',
@@ -16,7 +20,7 @@ export default [
 		name: 'user-profile-any',
 		path: '/user-profile/:user_id',
 		component: user_profile
-	},{
+	}, {
 		name: 'user-register',
 		path: '/register',
 		component: user_register
@@ -57,3 +61,9 @@ export default [
 		}
 	}
 ]
+
+// -------------------------------------------------------------
+Vue.use(VueRouter);
+export default new VueRouter({
+	routes: routes
+});

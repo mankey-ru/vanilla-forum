@@ -26,6 +26,19 @@ body {
 .link-dotted:hover {
 	text-decoration: none;
 }
+/*---------------------------------------------*/
+
+.sceditor-button-make_attachment {
+	text-indent: 0;
+}
+.sceditor-button-make_attachment:before {
+	content:"\e142";
+	font-family: 'Glyphicons Halflings';
+	font-weight: normal;
+	color: #000;
+	line-height: 1.7em;
+}
+/*------------------------------------------------*/
 
 
 

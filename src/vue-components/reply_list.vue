@@ -3,9 +3,7 @@
 	import mixins from './../vue-mixins.js';
 	import notie from 'notie';
 	import _ from 'lodash';
-	import $ from 'jquery';
 	import request from 'superagent';
-	window.$ = window.jQuery = $;	// для sceditor
 	var scroll = require('scroll');
 	var scrollDoc = require('scroll-doc')();
 
@@ -32,28 +30,28 @@
 				var theme_id = this.$route.params.theme_id;
 				pageNum = pageNum || 1;
 				request
-				.get(apiUrl + `theme/${theme_id}?pageNum=${pageNum}`)
-				.end((err, res)=>{
-					if (err || !res.body || !res.body.theme) {
-						notie.alert({
-							type: 'error', 
-							text: 'Request error'
-						});
-					}
-					else {
-						this.theme = res.body.theme;
-						var replies = res.body.replies;
-						if (replies instanceof Array) {
-							this.msgList.splice(0);
-							for (let msg of replies) {
-									msg.text = editorInstance.fromBBCode(msg.text); // server-side?
-									this.msgList.push(getMsg(msg));
+					.get(apiUrl + `theme/${theme_id}?pageNum=${pageNum}`)
+					.end((err, res)=>{
+						if (err || !res.body || !res.body.theme) {
+							notie.alert({
+								type: 'error', 
+								text: 'Request error'
+							});
+						}
+						else {
+							this.theme = res.body.theme;
+							var replies = res.body.replies;
+							if (replies instanceof Array) {
+								this.msgList.splice(0);
+								for (let msg of replies) {
+										msg.text = editorInstance.fromBBCode(msg.text);
+										this.msgList.push(getMsg(msg));
+									}
 								}
 							}
-						}
-						this.msgList_loading = false;
-						this.pager = res.body.pager;
-					});
+							this.msgList_loading = false;
+							this.pager = res.body.pager;
+						});
 			},
 			msg_add: function () {
 				var bbcodeVal = editorInstance.val();
@@ -73,29 +71,29 @@
 					text: bbcodeVal
 				}
 				request
-				.post(apiUrl + 'replies')
-				.send(newMsgSrv)
-				.end((err, res)=>{
-					if (err || !res.body) {
-						notie.alert({
-							type:'error', 
-							text: res.body.error || 'Creating reply failed'
-						});
-						this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
-					}
-					else {
-						notie.alert({
-							type:'success', 
-							text:'Reply created'
-						});
-						newMsg.pending_add = false;
-						// Actualizing some props to server values TODO
-						newMsg.date = res.body.date;
-						newMsg._id	= res.body._id;
-						editorInstance.val('');
-					}
-					editorInstance.readOnly(false);
-				});
+					.post(apiUrl + 'replies')
+					.send(newMsgSrv)
+					.end((err, res)=>{
+						if (err || !res.body) {
+							notie.alert({
+								type:'error', 
+								text: res.body.error || 'Creating reply failed'
+							});
+							this.msgList.splice(this.msgList.indexOf(newMsg), 1); // Removing previously shown reply
+						}
+						else {
+							notie.alert({
+								type:'success', 
+								text:'Reply created'
+							});
+							newMsg.pending_add = false;
+							// Actualizing some props to server values TODO
+							newMsg.date = res.body.date;
+							newMsg._id	= res.body._id;
+							editorInstance.val('');
+						}
+						editorInstance.readOnly(false);
+					});
 			},
 			DEBUG_MSGADD: function(){
 				if (!this.DEBUG_MSGADD_TEXT) {return}
@@ -128,34 +126,34 @@
 				msg.pending_vote = true;
 
 				request
-				.post(apiUrl + 'vote')
-				.send({
-					reply_id: msg._id,
-					value: val
-				})
-				.end((err, res)=>{
-					if (err || !res.body) {							
-						notie.alert({
-							type:'error', 
-							text: res.body.error || 'Vote failed'
-						});
-						msg.rating = ratingBackup;
-						msg.voted = votedBackup;
-						msg.author.rating_total = ratingTotalBackup;
-					}
-					else {
-						notie.alert({
-							type:'success', 
-							text:'Vote success'
-						});
-							// actualizing some props to server values
-							// if values is returning to prev then probably current user already voted
-							// TODO update all replies with this author
-							msg.author.rating_total = res.body.author_rating_total;
-							msg.rating = res.body.reply_rating;
+					.post(apiUrl + 'vote')
+					.send({
+						reply_id: msg._id,
+						value: val
+					})
+					.end((err, res)=>{
+						if (err || !res.body) {							
+							notie.alert({
+								type:'error', 
+								text: res.body.error || 'Vote failed'
+							});
+							msg.rating = ratingBackup;
+							msg.voted = votedBackup;
+							msg.author.rating_total = ratingTotalBackup;
 						}
-						msg.pending_vote = false;
-					});
+						else {
+							notie.alert({
+								type:'success', 
+								text:'Vote success'
+							});
+								// actualizing some props to server values
+								// if values is returning to prev then probably current user already voted
+								// TODO update all replies with this author
+								msg.author.rating_total = res.body.author_rating_total;
+								msg.rating = res.body.reply_rating;
+							}
+							msg.pending_vote = false;
+						});
 			},
 			msg_quote: function(msg){
 				var val = editorInstance.val();
@@ -174,10 +172,18 @@
 			// API http://www.sceditor.com/api/sceditor/
 			require('./../../node_modules/sceditor/minified/jquery.sceditor.bbcode.min.js');
 			require('./../../node_modules/sceditor/languages/ru.js');
+
+			$.sceditor.command.set('make_attachment', {
+				tooltip: 'Приложить файл',
+				exec: function () {
+					//this.insertText('Bump');
+				}
+			});
+
 			$ed = $('#editor-textarea').sceditor({
 				plugins: 'bbcode',
 				style: 'sceditor/inner-styles.css',
-				toolbar: "bold,italic,underline|source|left,center,right,justify|color|bulletlist,orderedlist|quote|image,link,unlink",
+				toolbar: "bold,italic,underline|source|left,center,right,justify|color|bulletlist,orderedlist|quote|image,link,unlink|make_attachment",
 				locale: "ru",
 				emoticonsEnabled: false,
 				enablePasteFiltering: true,
@@ -189,6 +195,7 @@
 					breakStartBlock: false
 				}//,autoUpdate: true
 			});
+			
 			$edWrap = $('.f-editor');
 			editorInstance = $ed.sceditor('instance');
 			editorInstance.bind('keyup', (evt)=>{ //  contextmenu blur
@@ -365,6 +372,13 @@
 					</div>
 				</div>
 			</div>
+			<div v-if="!currentUser">
+				<br/>
+				<br/>
+				<div class="well">
+					Please <a class="link-dotted">sign in</a> to post reply
+				</div>
+			</div>
 			<div v-if="DEBUG" style="margin: 4em 0;">
 				<div class="form-group">
 					<textarea v-model="DEBUG_MSGADD_TEXT" class="form-control" style="height:400px"></textarea>
@@ -373,13 +387,6 @@
 					<button v-on:click="DEBUG_MSGADD" class="btn btn-danger">
 						Send batch
 					</button>
-				</div>
-			</div>
-			<div v-else="">
-				<br/>
-				<br/>
-				<div class="well">
-					Please <a class="link-dotted">sign in</a> to post reply
 				</div>
 			</div>
 			<div v-show="currentUser" class="f-editor row">

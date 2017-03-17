@@ -11,6 +11,9 @@ const apiUrl = require('./api-url.js');
 const _ = require('lodash');
 const waterfall = require('async/waterfall')
 
+const bcrypt = require('bcrypt');
+const saltRounds = 8;
+
 const C_FORUM_GROUPS = "forum_groups";
 const C_FORUMS = "forums";
 const C_THEMES = "themes";
@@ -26,8 +29,6 @@ module.exports = function (app) {
 }
 
 function setupAuth(app) {
-	// Local auth
-	// http://passportjs.org/docs/username-password
 	passport.use(new LocalStrategy(
 		function (email, password, done) {
 			dbtools.getDb().collection(C_USERS).findOne({
@@ -45,12 +46,9 @@ function setupAuth(app) {
 			});
 		}
 	));
-
-	// Configure Passport authenticated session persistence.
 	passport.serializeUser(function (user, cb) {
 		cb(null, user._id);
 	});
-
 	passport.deserializeUser(function (_id, cb) {
 		dbtools.getDb().collection(C_USERS).findOne({
 			_id: ObjectID(_id)
@@ -61,10 +59,6 @@ function setupAuth(app) {
 			cb(null, user);
 		});
 	});
-
-	// Use application-level middleware for common functionality, including
-	// logging, parsing, and session handling.
-	//app.use(require('morgan')('combined'));
 	app.use(require('cookie-parser')());
 	app.use(require('body-parser').urlencoded({
 		extended: true
@@ -74,13 +68,24 @@ function setupAuth(app) {
 		resave: false,
 		saveUninitialized: false
 	}));
-
-	// Initialize Passport and restore authentication state, if any, from the
-	// session.
 	app.use(passport.initialize());
-	app.use(passport.session());
+	app.use(passport.session()); // restore authentication state, if any
 
 	var resultUrl = apiUrl + 'auth/result';
+
+	app.get(apiUrl + 'auth/result', function (req, res) {
+		if (req.user) {
+			req.user.pwd = '<NO>';
+		}
+		res.json({
+			user: req.user
+		});
+	});
+	/**
+		-----------------------------------------------
+						Login|Logout
+		-----------------------------------------------
+	*/
 
 	app.post(apiUrl + 'auth/in',
 		passport.authenticate('local', {
@@ -94,21 +99,12 @@ function setupAuth(app) {
 		res.redirect(resultUrl);
 	});
 
-	app.get(apiUrl + 'auth/result', function (req, res) {
-		if (req.user) {
-			req.user.pwd = '<NO>';
-		}
-		res.json({
-			user: req.user
-		});
-	});
-
 
 	/**
-		Reqistration
+		-----------------------------------------------
+						Registration
+		-----------------------------------------------
 	*/
-	const bcrypt = require('bcrypt');
-	const saltRounds = 8;
 
 	app.post(apiUrl + 'auth/reg', function (req, res) {
 		if (req.user) {
@@ -147,7 +143,6 @@ function setupAuth(app) {
 			},
 			// Generating pwd hash
 			function (next) { // TODOOOOO
-				//console.log('bcrypt.hash', arguments)
 				bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
 					newUser.pwd = hash;
 					next();
@@ -182,7 +177,7 @@ function setupAuth(app) {
 		}
 	});
 
-
+	// TODO app.use(require('morgan')('combined'));
 }
 
 function setupApi(app) {
@@ -225,6 +220,10 @@ function setupApi(app) {
 				as: 'author'
 			}
 		}, {
+			$sort: {
+				date: -1
+			}
+		}, {
 			$unwind: '$author'
 		}, {
 			$lookup: {
@@ -245,14 +244,15 @@ function setupApi(app) {
 		}, {
 			$unwind: '$last_reply_author'
 		}];
-		dbtools.getDb().collection(C_THEMES).aggregate(aRules).toArray(function (err, docs) {
-			if (err) {
-				handleError(res, err, "Failed to get themes.");
-			}
-			else {
-				res.status(200).json(docs).end();
-			}
-		});
+		dbtools.getDb().collection(C_THEMES)
+			.aggregate(aRules).toArray(function (err, docs) {
+				if (err) {
+					handleError(res, err, "Failed to get themes.");
+				}
+				else {
+					res.status(200).json(docs).end();
+				}
+			});
 	});
 
 	app.post(apiUrl + 'themes', function (req, res) {
@@ -440,6 +440,9 @@ function setupApi(app) {
 	});
 
 	app.post(apiUrl + 'vote', function (req, res) {
+		if (!req.user) {
+			return
+		}
 		req.body.author_id = ObjectID(req.user._id);
 		req.body.reply_id = ObjectID(req.body.reply_id);
 		req.body.date = new Date();
@@ -473,8 +476,8 @@ function setupApi(app) {
 							reply_id: newVote.reply_id
 						}, newVote, {
 							upsert: true // insert if not exists, updates if exist
-						}, function (err, doc, upserted) {
-							next(err || !doc, 'Failed to ' + (upserted ? 'create' : 'update') + ' vote');
+						}, function (err, dbres) {
+							next(err || !dbres ? 'Failed to create or update vote' : null);
 						});
 				},
 				// 2. Find all votes for current reply and recalculate its rating
@@ -491,7 +494,7 @@ function setupApi(app) {
 							for (let i = 0; i < votes.length; i++) {
 								reply_rating += votes[i].value | 0;
 							}
-							next(err || votes.length, 'Failed to find all votes for current reply');
+							next(err || !votes.length ? 'Failed to find all votes for current reply' : null);
 						});
 				},
 				// 3. Update rating of a current reply
@@ -504,7 +507,7 @@ function setupApi(app) {
 								rating: reply_rating
 							}
 						}, function (err, doc) {
-							next(err || !doc, 'Failed to update rating of voted reply');
+							next(err || !doc ? 'Failed to update rating of voted reply' : null);
 						});
 				},
 				// 4. Find author of voted reply
@@ -514,7 +517,7 @@ function setupApi(app) {
 							_id: newVote.reply_id
 						}, function (err, doc) {
 							reply_author_id = ObjectID(doc.author_id);
-							next(err || !doc, 'Failed to find author of voted reply')
+							next(err || !doc ? 'Failed to find author of voted reply' : null)
 						});
 				},
 				// 5. Find all replies of author of voted reply and recalculate his rating
@@ -528,7 +531,7 @@ function setupApi(app) {
 							for (let i = 0; i < docs.length; i++) {
 								rating_total += docs[i].rating | 0;
 							}
-							next(err || docs.length, 'Failed to find all replies of author of voted reply')
+							next(err || !docs.length ? 'Failed to find all replies of author of voted reply' : null)
 						});
 				},
 				// 6. Update rating of author of voted reply
@@ -544,7 +547,7 @@ function setupApi(app) {
 								rating_total: rating_total
 							}
 						}, function (err, doc) {
-							next(err || !doc, 'Failed to update rating_total of author of voted reply');
+							next(err || !doc ? 'Failed to update rating_total of author of voted reply' : null);
 						});
 				}
 			],

@@ -47,7 +47,7 @@
 </template>
 
 <script>
-	import $ from 'jquery';	
+	import request from 'superagent';	
 	var apiUrl = require('./../api-url.js');
 
 	var Comp = {
@@ -62,17 +62,22 @@
 			getUser: function(){
 				var user_id = this.$router.currentRoute.params.user_id;
 				if (user_id) {
-					$.getJSON(apiUrl + 'user/' + user_id, {}) 
-					.done((data)=>{
-						if (data instanceof Object) {
-							this.user = data;
-							this.own = this.currentUser._id === data._id;
-						}
-					})
-					.fail(()=>{
-						console.warn('Неудача. Ждём секунду и пробуем ещё раз.');
-					})
-					.always(()=>{})
+					request
+						.get(`${apiUrl}user/${user_id}`)
+						.end((err, res) => {
+							if (err || !res.body) {
+								notie.alert({
+									type: 'error',
+									text: 'Request error'
+								});
+							}
+							else {
+								if (res.body instanceof Object) {
+									this.user = res.body;
+									this.own = this.currentUser._id === res.body._id;
+								}
+							}
+						});				
 				}
 				else {
 					this.user = this.currentUser;
