@@ -38,6 +38,9 @@ body {
 	color: #000;
 	line-height: 1.7em;
 }
+.sceditor-container iframe {
+	width:99% !important;
+}
 /*------------------------------------------------*/
 
 

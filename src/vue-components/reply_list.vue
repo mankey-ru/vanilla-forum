@@ -113,6 +113,11 @@
 					}
 				}, 2000)
 			},
+			scrollTo_login: function(){
+				//window.scroll(0,0)
+				scroll.top(scrollDoc, 0, { duration: 200 })
+				document.querySelector('[name="email"]').focus();
+			},
 			msg_vote: function(msg, val){
 				if (val===msg.voted) {
 					return
@@ -176,7 +181,8 @@
 			$.sceditor.command.set('make_attachment', {
 				tooltip: 'Приложить файл',
 				exec: function () {
-					//this.insertText('Bump');
+					//this.insertText('Bump')
+					alert('Здесь диалог выбора файла')
 				}
 			});
 
@@ -198,8 +204,10 @@
 			
 			$edWrap = $('.f-editor');
 			editorInstance = $ed.sceditor('instance');
-			editorInstance.bind('keyup', (evt)=>{ //  contextmenu blur
+			editorInstance.bind('keyup', (_evt)=>{ //  contextmenu blur
+				var evt = _evt.originalEvent;
 				if (evt.keyCode===13 && evt.ctrlKey===true) {
+					console.log('keyup1')
 					this.msg_add();
 				}
 			})
@@ -346,8 +354,7 @@
 									Cкрыть снова
 								</a>
 							</div>
-							<div class="col-sm-10 col-xs-24 text-right">
-
+							<div class="col-sm-10 col-xs-24 text-right" v-if="currentUser">
 								<button v-on:click="msg_quote(msg)" class="btn btn-default">
 									<i class="glyphicon glyphicon-comment"></i> 
 									Цитата
@@ -376,7 +383,7 @@
 				<br/>
 				<br/>
 				<div class="well">
-					Please <a class="link-dotted">sign in</a> to post reply
+					Please <a class="link-dotted" v-on:click="scrollTo_login">sign in</a> to post reply
 				</div>
 			</div>
 			<div v-if="DEBUG" style="margin: 4em 0;">

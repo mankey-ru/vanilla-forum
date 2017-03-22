@@ -9,8 +9,8 @@
 		data: function () {
 			return {
 				signIn: {
-					email: '',
-					password: '',
+					email: '123@123.ru',
+					password: '123',
 					pending: false
 				},
 				signOut_pending: false
@@ -106,7 +106,7 @@
 							</div>
 							<div class="col-xs-4">
 								<div><label>&#160;</label></div>
-								<button class="btn btn-primary" v-bind:disabled="!signIn_valid || signIn.pending" type="submit">
+								<button class="btn btn-primary" v-bind:disabled="signIn.pending" type="submit">
 									<i v-show="signIn.pending" class="spin"></i> 
 									<i v-show="!signIn.pending" class="glyphicon glyphicon-log-in"></i> 
 									Log in

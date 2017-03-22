@@ -88,10 +88,12 @@ function setupAuth(app) {
 	*/
 
 	app.post(apiUrl + 'auth/in',
-		passport.authenticate('local', {
-			successRedirect: resultUrl,
-			failureRedirect: resultUrl
-		})
+		function (req, res, next) {
+			passport.authenticate('local', {
+				successRedirect: resultUrl,
+				failureRedirect: resultUrl
+			})(req, res, next)
+		}
 	);
 
 	app.post(apiUrl + 'auth/out', function (req, res) {
